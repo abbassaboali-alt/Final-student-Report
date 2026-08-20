@@ -1,0 +1,2734 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>برودل – التقرير الأكاديمي الشامل</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet" />
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
+
+<!-- Chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+/* □ إزالة شريط التمرير الأفقي نهائياً (Weebly + Caspio Style) */
+html, body{
+  margin:0 !important;
+  padding:0 !important;
+  width:100% !important;
+  max-width:100% !important;
+  overflow-x:hidden !important;
+}
+*,
+*::before,
+*::after{ box-sizing:border-box !important; }
+table, div, section{ max-width:100% !important; }
+.container{
+  width:100% !important;
+  max-width:100% !important;
+  padding:16px !important;
+}
+
+/* ===== UI ===== */
+:root{--blue:#164478;--blink:#fff1c1}
+body{margin:0;font-family:Tajawal;background:#f4f6fb}
+.page{max-width:1200px;margin:auto;padding:12px}
+
+header{
+  background:var(--blue);color:#fff;text-align:center;
+  padding:20px;border-radius:16px;
+  font-size:22px;font-weight:900
+}
+.box{
+  background:#fff;padding:20px;border-radius:18px;
+  box-shadow:0 8px 22px rgba(0,0,0,.12);
+  margin-top:14px
+}
+.login-box{max-width:460px;margin:30px auto;text-align:center}
+.login-box input{
+  width:100%;padding:14px;border-radius:14px;
+  border:2px solid #d7deea;font-size:16px;font-weight:900;
+  margin-top:8px;
+}
+.login-box button{
+  width:100%;margin-top:10px;padding:14px;
+  border-radius:14px;border:none;
+  background:var(--blue);color:#fff;
+  font-weight:900;font-size:16px;cursor:pointer
+}
+select{
+  width:100%;padding:12px;border-radius:12px;
+  border:2px solid #d7deea;font-weight:900;
+  font-family:Tajawal;
+  margin-top:6px
+}
+.statRow{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:12px;margin-top:14px
+}
+.stat{
+  background:#f6f8fb;padding:14px;
+  border-radius:14px;text-align:center;font-weight:900
+}
+.table-wrap{overflow-x:auto}
+table{
+  width:100%;border-collapse:collapse;
+  margin-top:12px;min-width:720px
+}
+th,td{
+  border:2px solid var(--blue);
+  padding:8px;text-align:center;font-weight:800
+}
+th{background:var(--blue);color:#fff}
+
+.current-week{animation:blink 1s infinite}
+@keyframes blink{
+  0%{background:var(--blink)}
+  50%{background:#fff}
+  100%{background:var(--blink)}
+}
+
+.badge{
+  display:inline-block;padding:6px 14px;border-radius:999px;
+  font-weight:900
+}
+.badge-green{background:#2ecc71;color:#fff}
+.badge-yellow{background:#f1c40f;color:#000}
+.badge-orange{background:#e67e22;color:#fff}
+.badge-red{background:#e74c3c;color:#fff}
+
+.chart-wrap{height:260px;margin-top:10px}
+.hint{text-align:center;font-weight:900;color:#60708a;margin-top:10px}
+
+button.action{
+  width:100%;padding:12px;border-radius:12px;
+  background:var(--blue);color:#fff;border:none;
+  font-weight:900;margin-top:10px;cursor:pointer;
+  font-family:Tajawal
+}
+.twoBtns{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px
+}
+.chartGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:14px;
+  margin-top:12px;
+}
+
+.chartCard{
+  background:#fff;
+  border:1px solid #dbe7f8;
+  border-radius:18px;
+  padding:14px;
+  box-shadow:0 4px 14px rgba(0,0,0,.06);
+}
+
+.chartTitle{
+  font-size:15px;
+  font-weight:900;
+  color:#164478;
+  margin-bottom:10px;
+  text-align:center;
+}
+
+.chartBox{
+  height:280px;
+  position:relative;
+}
+@media (max-width:700px){
+  .twoBtns{grid-template-columns:1fr}
+}
+.smallLine{
+  margin:8px 0 0 0;
+  font-weight:900;color:#3b4a66;line-height:1.7
+}
+.commentBox{
+  background:#f6f8fb;border-radius:12px;padding:12px;
+  font-weight:900
+}
+.topActions{
+  display:flex;gap:10px;flex-wrap:wrap;
+  justify-content:flex-end;margin-top:10px
+}
+.topActions .miniBtn{
+  padding:10px 14px;border-radius:12px;border:none;cursor:pointer;
+  font-weight:900;font-family:Tajawal;
+  background:#e9eef7;color:#12385f
+}
+.topActions .miniBtn.red{
+  background:#ffe5e5;color:#9b1c1c
+}
+.plan-final{
+  background:#dc3545 !important;
+  color:#fff !important;
+  font-weight:900;
+}
+
+.plan-midterm{
+  background:#ffc107 !important;
+  color:#000 !important;
+  font-weight:900;
+}
+
+.plan-quiz{
+  background:#0d6efd !important;
+  color:#fff !important;
+  font-weight:900;
+}
+
+.plan-activity{
+  background:#198754 !important;
+  color:#fff !important;
+  font-weight:900;
+}
+
+.plan-normal{
+  background:#fff6d8 !important;
+  color:#111 !important;
+  font-weight:900;
+}
+</style>
+</head>
+
+<body>
+<div class="page">
+
+<header>
+  <img id="hdrLogo"
+       src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRJprpZXU4pTSCYXKhzWCpqdZ_mnPHMwqsACA&s"
+       style="width:110px;height:110px"><br>
+  برودل – التقرير الأكاديمي الشامل
+</header>
+
+<div class="box login-box" id="loginBox">
+  <h3>دخول الطالب/ة</h3>
+
+  <input id="identity" placeholder="رقم الهوية / الإقامة" />
+  <input id="last4" placeholder="آخر 4 أرقام من الهوية" inputmode="numeric" />
+
+  <button onclick="login()">عرض التقرير</button>
+  <p id="msg" style="color:#c0392b;font-weight:900"></p>
+</div>
+
+<div class="box" id="content" style="display:none">
+  <div class="topActions">
+    <button class="miniBtn red" onclick="logoutStudent()">تسجيل خروج</button>
+  </div>
+
+  <h2 id="studentName" style="margin:0 0 10px 0"></h2>
+
+  <select id="courseSelector">
+    <option value="">— اختر الدورة لعرض البيانات —</option>
+  </select>
+
+  <p class="hint" id="hint">⬅️ الرجاء اختيار دورة</p>
+
+  <div id="dataBox" style="display:none">
+
+    <p class="smallLine" id="courseInfo"></p>
+
+    <!-- Attendance -->
+    <div class="statRow">
+      <div class="stat">آخر حضور<br><span id="lastAttendance">—</span></div>
+      <div class="stat">أيام الحضور<br><span id="presentCount">0</span></div>
+      <div class="stat">أيام الغياب<br><span id="absentCount">0</span></div>
+      <div class="stat">درجة الحضور<br><span id="attScore">—</span></div>
+    </div>
+
+    <!-- Study Plan -->
+    <h3 style="margin:16px 0 0 0">الخطة الدراسية</h3>
+    <div class="table-wrap">
+      <div id="weeklyPlan"><p class="hint">—</p></div>
+    </div>
+
+    <!-- Grades -->
+    <h3 style="margin:16px 0 0 0">الدرجات</h3>
+    <div class="table-wrap">
+      <table>
+        <tbody>
+          <tr>
+            <th>منتصف</th>
+            <th>نهائي</th>
+            <th>واجبات</th>
+            <th>الحضور</th>
+            <th>تحدث</th>
+            <th>استماع</th>
+            <th>الإجمالي</th>
+            <th>التقدير</th>
+          </tr>
+          <tr>
+            <td id="mid">—</td>
+            <td id="fin">—</td>
+            <td id="home">—</td>
+            <td id="attGradeCell">—</td>
+            <td id="speak">—</td>
+            <td id="listen">—</td>
+            <td id="totalScore">—</td>
+            <td id="finalBadge">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Skills -->
+<h3 style="margin:16px 0 0 0">تقييم المهارات</h3>
+
+<div class="chartGrid">
+
+  <div class="chartCard">
+    <div class="chartTitle">Skill Scores</div>
+    <div class="chartBox">
+      <canvas id="skillsChart"></canvas>
+    </div>
+  </div>
+
+  <div class="chartCard">
+    <div class="chartTitle">Skills Comparison</div>
+    <div class="chartBox">
+      <canvas id="summaryChart"></canvas>
+    </div>
+  </div>
+
+  <div class="chartCard">
+    <div class="chartTitle">Weak / Strong Skills</div>
+    <div class="chartBox">
+      <canvas id="weakStrongChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+    <!-- Trainer Comment -->
+    <h3 style="margin:16px 0 0 0">تعليق المدرب</h3>
+    <div id="trainerComment" class="commentBox">—</div>
+
+    <!-- Buttons -->
+    <div class="twoBtns">
+      <button class="action" onclick="exportPDFReport()">□ تحميل التقرير PDF</button>
+      <button class="action" onclick="goToMNAR()">□ الانتقال إلى منصة منار</button>
+    </div>
+
+  </div>
+</div>
+
+</div>
+
+<script>
+/* ================= FIREBASE ================= */
+if(!firebase.apps.length){
+  firebase.initializeApp({
+    apiKey:"AIzaSyCCFBvZosI8dwShZjxvZzI-SU5igEbcOKk",
+    authDomain:"prudle-system.firebaseapp.com",
+    projectId:"prudle-system"
+  });
+}
+const db=firebase.firestore();
+
+/* ================= GLOBAL ================= */
+let COURSES=[];           // [{student, course}]
+let CURRENT_INDEX=-1;
+
+let SKILL_BAR_CHART = null;
+let SUMMARY_CHART = null;
+let WEAK_STRONG_CHART = null;
+
+const SKILL_NAMES = [
+  "Listening",
+  "Speaking",
+  "Reading",
+  "Writing",
+  "Grammar",
+  "Vocabulary"
+];
+
+let SKILL_SCORES = {};
+let ACTIVITY_HISTORY = [];
+let ACTIVITY_FINAL_AVERAGE = null;
+let COURSE_LOAD_TOKEN = 0;
+let LOGIN_IN_PROGRESS = false;
+let LAST_RENDERED_COURSE_KEY = "";
+
+let unsubStudyPlan=null;
+
+const PDF_LOGO_URL = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRlEGHcXcelOlihtrBLFCmjumIyuBxqyoWEZM8DgDpBVg&s";
+
+function clearStudentLogin(){
+  localStorage.removeItem("studentID");
+  localStorage.removeItem("student_iqama");
+  localStorage.removeItem("studentLoginDate");
+  sessionStorage.clear();
+}
+
+function goLoginPage(){
+  clearStudentLogin();
+
+  if(window.location.search){
+    history.replaceState(null, "", window.location.pathname);
+  }
+
+  window.top.location.replace("https://www.prudle-education.com/log-in-out");
+}
+
+function hasValidStudentLogin(){
+  const id =
+    localStorage.getItem("studentID") ||
+    localStorage.getItem("student_iqama");
+
+  const last = localStorage.getItem("studentLoginDate");
+  const today = new Date().toDateString();
+
+  return !!id && last === today;
+}
+
+window.addEventListener("pageshow", function(){
+
+  if(localStorage.getItem("studentLoggedOut") === "1"){
+    goLoginPage();
+    return;
+  }
+
+  if(!hasValidStudentLogin()){
+    goLoginPage();
+    return;
+  }
+
+});
+
+window.addEventListener("load", function(){
+
+  if(!hasValidStudentLogin()){
+    return;
+  }
+
+  const id =
+    localStorage.getItem("studentID") ||
+    localStorage.getItem("student_iqama");
+
+  identity.value = id;
+  last4.value = String(id).slice(-4);
+  login();
+
+});
+
+/* ================= LOGOUT ================= */
+function logoutStudent(){
+
+  localStorage.setItem("studentLoggedOut","1");
+
+  localStorage.removeItem("studentID");
+  localStorage.removeItem("student_iqama");
+  localStorage.removeItem("studentLoginDate");
+
+  sessionStorage.clear();
+
+  location.replace(
+    "https://www.prudle-education.com/log-in-out"
+  );
+}
+
+/* ================= LOGIN ================= */
+async function login(){
+
+  if(LOGIN_IN_PROGRESS){
+    return;
+  }
+
+  LOGIN_IN_PROGRESS = true;
+
+  try{
+
+    msg.textContent="";
+
+    const iq=identity.value.trim();
+    const l4=last4.value.trim();
+
+    if(!iq){
+      msg.textContent="أدخل رقم الهوية";
+      return;
+    }
+
+    if(!l4 || l4.length!==4){
+      msg.textContent="أدخل آخر 4 أرقام";
+      return;
+    }
+
+    if(!iq.endsWith(l4)){
+      msg.textContent="آخر 4 أرقام غير صحيحة";
+      return;
+    }
+
+    localStorage.removeItem("studentLoggedOut");
+    localStorage.setItem("studentID", iq);
+    localStorage.setItem("student_iqama", iq);
+    localStorage.setItem("studentLoginDate", new Date().toDateString());
+
+    const q =
+      await db
+        .collection("students")
+        .where("iqama","==",iq)
+        .get();
+
+    if(q.empty){
+      msg.textContent="الطالب غير موجود";
+      return;
+    }
+
+    const STUDENTS =
+      q.docs.map(d=>({
+        id:d.id,
+        ...(d.data()||{})
+      }));
+
+    studentName.textContent =
+      STUDENTS[0]?.name || "-";
+
+    /*
+      مهم:
+      قد يوجد أكثر من سجل للطالب يشير إلى نفس courseId.
+      نجمع الدورة مرة واحدة فقط باستخدام Map.
+    */
+    const uniqueCoursesMap = new Map();
+
+    for(const s of STUDENTS){
+
+      const courseId =
+        String(s.courseId || "").trim();
+
+      if(!courseId){
+        continue;
+      }
+
+      if(uniqueCoursesMap.has(courseId)){
+        /*
+          لا نكرر الدورة.
+          نحتفظ بأول سجل طالب مرتبط بها.
+        */
+        continue;
+      }
+
+      const c =
+        await db
+          .collection("Courses")
+          .doc(courseId)
+          .get();
+
+      if(!c.exists){
+        continue;
+      }
+
+      uniqueCoursesMap.set(
+        courseId,
+        {
+          student:s,
+          course:{
+            id:c.id,
+            ...(c.data()||{})
+          }
+        }
+      );
+    }
+
+    COURSES =
+      Array.from(
+        uniqueCoursesMap.values()
+      );
+
+    COURSES.sort((a,b)=>{
+      const A=String(
+        a.course.StartingDate ||
+        a.course.startDate ||
+        ""
+      );
+
+      const B=String(
+        b.course.StartingDate ||
+        b.course.startDate ||
+        ""
+      );
+
+      return A.localeCompare(B);
+    });
+
+    /*
+      إعادة بناء القائمة مرة واحدة فقط.
+      نستخدم course.id كقيمة option بدلاً من index
+      لمنع أي التباس أو تكرار عند إعادة الترتيب.
+    */
+    courseSelector.innerHTML =
+      '<option value="">— اختر الدورة لعرض البيانات —</option>';
+
+    const renderedCourseIds =
+      new Set();
+
+    COURSES.forEach(item=>{
+
+      const courseId =
+        String(item.course.id || "").trim();
+
+      if(
+        !courseId ||
+        renderedCourseIds.has(courseId)
+      ){
+        return;
+      }
+
+      renderedCourseIds.add(courseId);
+
+      const o =
+        document.createElement("option");
+
+      o.value = courseId;
+
+      const name =
+        item.course.TrainingCourse ||
+        item.course.CourseName ||
+        "دورة";
+
+      const start =
+        item.course.StartingDate
+          ? ` | ${item.course.StartingDate}`
+          : "";
+
+      const tr =
+        item.course.Trainer
+          ? ` | ${item.course.Trainer}`
+          : "";
+
+      o.textContent =
+        `${name}${start}${tr}`;
+
+      courseSelector.appendChild(o);
+    });
+
+    courseSelector.onchange =
+      async ()=>{
+
+        const selectedCourseId =
+          String(
+            courseSelector.value || ""
+          ).trim();
+
+        if(!selectedCourseId){
+
+          CURRENT_INDEX=-1;
+          LAST_RENDERED_COURSE_KEY="";
+
+          dataBox.style.display="none";
+          hint.style.display="block";
+
+          if(unsubStudyPlan){
+            unsubStudyPlan();
+            unsubStudyPlan=null;
+          }
+
+          return;
+        }
+
+        const nextIndex =
+          COURSES.findIndex(item=>
+            String(item.course.id) ===
+            selectedCourseId
+          );
+
+        if(nextIndex < 0){
+          return;
+        }
+
+        /*
+          إذا ضغط الطالب نفس الدورة مرة أخرى أو ضغط مرتين،
+          لا نعيد تحميلها ولا ننشئ اشتراكات أو عرضًا مكررًا.
+        */
+        if(
+          CURRENT_INDEX === nextIndex &&
+          LAST_RENDERED_COURSE_KEY === selectedCourseId &&
+          dataBox.style.display !== "none"
+        ){
+          return;
+        }
+
+        CURRENT_INDEX =
+          nextIndex;
+
+        LAST_RENDERED_COURSE_KEY =
+          selectedCourseId;
+
+        hint.style.display="none";
+        dataBox.style.display="block";
+
+        const loadToken =
+          ++COURSE_LOAD_TOKEN;
+
+        await loadCourse(loadToken);
+      };
+
+    loginBox.style.display="none";
+    content.style.display="block";
+
+  }catch(error){
+
+    console.error(
+      "STUDENT REPORT LOGIN ERROR:",
+      error
+    );
+
+    msg.textContent =
+      "تعذر تحميل بيانات الطالب. حاول مرة أخرى.";
+
+  }finally{
+
+    LOGIN_IN_PROGRESS = false;
+
+  }
+}
+
+/* ================= LOAD COURSE ================= */
+async function loadCourse(loadToken = COURSE_LOAD_TOKEN){
+
+  const data =
+    COURSES[CURRENT_INDEX];
+
+  if(!data){
+    return;
+  }
+
+  const STUDENT=data.student;
+  const COURSE=data.course;
+
+  courseInfo.textContent =
+    `الدورة: ${COURSE.TrainingCourse||COURSE.CourseName||"-"} | المدرب: ${COURSE.Trainer||"-"} | الفترة: ${COURSE.Period||"-"} | تاريخ البدء: ${COURSE.StartingDate||"-"}`;
+
+  trainerComment.textContent =
+    STUDENT.trainerComment || "—";
+
+  renderAttendance(STUDENT);
+
+  renderPlanLive(COURSE);
+
+  renderGrades(STUDENT);
+
+  /*
+    تحميل تقييم المهارات + سجل الأنشطة من نفس مصدر EnglishActivities.
+    الدالة تتحقق من الطالب والدورة وتمنع تكرار السجلات.
+  */
+  await loadSkills(
+    STUDENT,
+    COURSE.id
+  );
+
+  /*
+    إذا اختار الطالب دورة أخرى أثناء انتظار Firebase،
+    لا نرسم بيانات الدورة القديمة فوق الجديدة.
+  */
+  if(loadToken !== COURSE_LOAD_TOKEN){
+    return;
+  }
+
+  renderStudentSkillAnalytics();
+}
+
+/* ================= ATTENDANCE ================= */
+function renderAttendance(STUDENT){
+  const r=Array.isArray(STUDENT.records)?STUDENT.records:[];
+  const present=r.filter(x=>x && x.status==="present");
+  const absent =r.filter(x=>x && x.status==="absent");
+  presentCount.textContent=present.length;
+  absentCount.textContent=absent.length;
+
+  const last=[...r]
+    .filter(x=>x && x.date)
+    .sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
+
+  lastAttendance.textContent = last ? `${last.date} (${last.status})` : "—";
+
+  const att = calcAttendanceScore(STUDENT);
+  attScore.textContent = att==null ? "—" : `${att} / 10`;
+  attGradeCell.textContent = att==null ? "—" : att;
+}
+
+function calcAttendanceScore(STUDENT){
+  const r=Array.isArray(STUDENT.records)?STUDENT.records:[];
+  if(!r.length) return null;
+  const p=r.filter(x=>x && x.status==="present").length;
+  return Math.floor((p/r.length)*10);
+}
+
+/* ================= GRADES ================= */
+function renderGrades(STUDENT){
+  const midV = STUDENT.midterm;
+  const finV = STUDENT.finalExam;
+  const homeV= STUDENT.hwScore;
+  const speakV=STUDENT.speaking;
+  const listenV=STUDENT.listening;
+  const att=calcAttendanceScore(STUDENT);
+
+  mid.textContent = midV ?? "—";
+  fin.textContent = finV ?? "—";
+  home.textContent = homeV ?? "—";
+  speak.textContent = speakV ?? "—";
+  listen.textContent = listenV ?? "—";
+
+  attGradeCell.textContent = att ?? "—";
+
+  const isComplete =
+    midV != null &&
+    finV != null &&
+    homeV != null &&
+    speakV != null &&
+    listenV != null &&
+    att != null;
+
+  if(!isComplete){
+    totalScore.textContent="—";
+    finalBadge.innerHTML="—";
+    return;
+  }
+
+  const total =
+    Number(midV)+
+    Number(finV)+
+    Number(homeV)+
+    Number(speakV)+
+    Number(listenV)+
+    Number(att);
+
+  totalScore.textContent = `${total} / 100`;
+
+  const {cls,lbl}=gradeLabel(total);
+  finalBadge.innerHTML = `<span class="badge ${cls}">${lbl}</span>`;
+}
+
+function gradeLabel(total){
+  if(total>=90) return {cls:"badge-green", lbl:"Excellent"};
+  if(total>=80) return {cls:"badge-green", lbl:"Very Good"};
+  if(total>=70) return {cls:"badge-yellow",lbl:"Good"};
+  if(total>=65) return {cls:"badge-orange",lbl:"Pass"};
+  return {cls:"badge-red",lbl:"Failed"};
+}
+
+/* ================= SKILLS (EnglishActivities) ================= */
+async function loadSkills(STUDENT, courseId){
+
+  SKILL_SCORES = {};
+  ACTIVITY_HISTORY = [];
+  ACTIVITY_FINAL_AVERAGE = null;
+
+  SKILL_NAMES.forEach(skill=>{
+    SKILL_SCORES[skill] = 0;
+  });
+
+  const studentDocId =
+    String(STUDENT.id || "").trim();
+
+  const studentIqama =
+    String(
+      STUDENT.iqama ||
+      STUDENT.studentIqama ||
+      STUDENT.studentID ||
+      ""
+    ).trim();
+
+
+  /* =====================================================
+     1) SKILL EVALUATION — EnglishActivities
+  ===================================================== */
+
+  try{
+
+    const skillsSnap =
+      await db
+        .collection("EnglishActivities")
+        .where("courseId","==",courseId)
+        .get();
+
+    skillsSnap.forEach(doc=>{
+
+      const r = doc.data() || {};
+
+      const activityStudentId =
+        String(
+          r.studentId ||
+          r.studentID ||
+          ""
+        ).trim();
+
+      const activityIqama =
+        String(
+          r.studentIqama ||
+          r.iqama ||
+          ""
+        ).trim();
+
+      const sameStudent =
+        activityStudentId === studentDocId ||
+        activityStudentId === studentIqama ||
+        activityIqama === studentIqama;
+
+      if(!sameStudent){
+        return;
+      }
+
+      const skill =
+        normalizeSkillName(
+          r.skill ||
+          r.skillName ||
+          r.category ||
+          ""
+        );
+
+      const score =
+        Number(
+          r.score ??
+          r.grade ??
+          r.points ??
+          0
+        );
+
+      if(SKILL_NAMES.includes(skill)){
+
+        SKILL_SCORES[skill] =
+          Math.max(
+            Number(SKILL_SCORES[skill] || 0),
+            Number.isFinite(score)
+              ? score
+              : 0
+          );
+      }
+
+    });
+
+  }catch(error){
+
+    console.error(
+      "Unable to load skill evaluations:",
+      error
+    );
+
+  }
+
+
+  /* =====================================================
+     2) SOLVED ACTIVITIES — FunActivityResults
+     هذه هي المجموعة الفعلية التي تحفظ نتائج النشاط المحلول.
+  ===================================================== */
+
+  try{
+
+    const resultSnap =
+      await db
+        .collection("FunActivityResults")
+        .where("courseId","==",courseId)
+        .get();
+
+    /*
+      نحتفظ بأحدث نتيجة لكل Activity ID حتى لا يظهر
+      النشاط مرتين إذا أعيد الحل/التقييم.
+    */
+    const latestByActivity =
+      new Map();
+
+    resultSnap.forEach(doc=>{
+
+      const r =
+        doc.data() || {};
+
+      const resultStudentDocId =
+        String(
+          r.studentId ||
+          r.participantId ||
+          ""
+        ).trim();
+
+      const resultIqama =
+        String(
+          r.studentIqama ||
+          r.rankingStudentIqama ||
+          r.iqama ||
+          ""
+        ).trim();
+
+      const sameStudent =
+        (
+          studentDocId &&
+          resultStudentDocId === studentDocId
+        ) ||
+        (
+          studentIqama &&
+          (
+            resultStudentDocId === studentIqama ||
+            resultIqama === studentIqama
+          )
+        );
+
+      if(!sameStudent){
+        return;
+      }
+
+      /*
+        نعرض فقط النتائج الفعلية للطالب.
+        سجلات الفرق/الضيوف لا تدخل في التقرير الفردي.
+      */
+      if(
+        r.anonymous === true ||
+        r.teamMode === true
+      ){
+        return;
+      }
+
+      const activityId =
+        String(
+          r.activityId ||
+          r.activityID ||
+          doc.id
+        ).trim();
+
+      const title =
+        String(
+          r.activityTitle ||
+          r.title ||
+          r.activityName ||
+          "Activity"
+        ).trim();
+
+      const score =
+        Number(
+          r.correctAnswers ??
+          r.score ??
+          0
+        );
+
+      const total =
+        Number(
+          r.totalAnswers ??
+          r.total ??
+          r.totalQuestions ??
+          0
+        );
+
+      let percent =
+        Number(
+          r.percent ??
+          r.accuracy ??
+          r.scorePercent ??
+          NaN
+        );
+
+      if(
+        !Number.isFinite(percent) &&
+        total > 0
+      ){
+        percent =
+          (score / total) * 100;
+      }
+
+      if(!Number.isFinite(percent)){
+        percent = 0;
+      }
+
+      percent =
+        Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round(percent * 10) / 10
+          )
+        );
+
+      const createdMs =
+        getActivityResultTimeMs(
+          r.createdAt ||
+          r.completedAt ||
+          r.updatedAt ||
+          r.date ||
+          ""
+        );
+
+      const dateText =
+        formatActivityHistoryDate(
+          r.createdAt ||
+          r.completedAt ||
+          r.updatedAt ||
+          r.date ||
+          ""
+        ) || "-";
+
+      const item = {
+        id:doc.id,
+        activityId,
+        title,
+        score:Number.isFinite(score) ? score : 0,
+        total:Number.isFinite(total) ? total : 0,
+        percent,
+        date:dateText,
+        createdMs
+      };
+
+      const previous =
+        latestByActivity.get(activityId);
+
+      if(
+        !previous ||
+        item.createdMs >= previous.createdMs
+      ){
+        latestByActivity.set(
+          activityId,
+          item
+        );
+      }
+
+    });
+
+    ACTIVITY_HISTORY =
+      Array.from(
+        latestByActivity.values()
+      )
+      .sort(
+        (a,b)=>
+          b.createdMs - a.createdMs
+      );
+
+    if(ACTIVITY_HISTORY.length){
+
+      const sum =
+        ACTIVITY_HISTORY.reduce(
+          (total,item)=>
+            total +
+            Number(item.percent || 0),
+          0
+        );
+
+      ACTIVITY_FINAL_AVERAGE =
+        Math.round(
+          (sum / ACTIVITY_HISTORY.length) * 10
+        ) / 10;
+
+    }else{
+
+      ACTIVITY_FINAL_AVERAGE = null;
+
+    }
+
+  }catch(error){
+
+    console.error(
+      "Unable to load solved activity results:",
+      error
+    );
+
+    ACTIVITY_HISTORY = [];
+    ACTIVITY_FINAL_AVERAGE = null;
+
+  }
+
+}
+
+
+function getActivityResultTimeMs(value){
+
+  if(!value){
+    return 0;
+  }
+
+  try{
+
+    if(
+      value &&
+      typeof value.toDate === "function"
+    ){
+      return value.toDate().getTime();
+    }
+
+    if(value instanceof Date){
+      return value.getTime();
+    }
+
+    const d =
+      new Date(value);
+
+    return Number.isNaN(d.getTime())
+      ? 0
+      : d.getTime();
+
+  }catch(error){
+
+    return 0;
+
+  }
+}
+
+
+function formatActivityHistoryDate(value){
+
+  if(!value){
+    return "";
+  }
+
+  try{
+
+    let d = null;
+
+    if(
+      value &&
+      typeof value.toDate === "function"
+    ){
+      d = value.toDate();
+    }else if(value instanceof Date){
+      d = value;
+    }else{
+      const parsed =
+        new Date(value);
+
+      if(!Number.isNaN(parsed.getTime())){
+        d = parsed;
+      }
+    }
+
+    if(!d){
+      return String(value || "");
+    }
+
+    return d.toLocaleDateString(
+      "en-GB",
+      {
+        day:"2-digit",
+        month:"2-digit",
+        year:"numeric"
+      }
+    );
+
+  }catch(error){
+
+    return String(value || "");
+
+  }
+}
+
+
+function normalizeSkillName(skill){
+
+  const s =
+    String(skill || "")
+      .toLowerCase()
+      .trim();
+
+  if(s.includes("listen")) return "Listening";
+  if(s.includes("speak")) return "Speaking";
+  if(s.includes("read")) return "Reading";
+  if(s.includes("writ")) return "Writing";
+  if(s.includes("grammar")) return "Grammar";
+  if(s.includes("vocab")) return "Vocabulary";
+
+  return String(skill || "").trim();
+
+}
+
+function renderStudentSkillAnalytics(){
+
+  renderSkillBarChart();
+  renderSkillRadarChart();
+  renderWeakStrongSkillChart();
+
+}
+
+function renderSkillBarChart(){
+
+  const ctx = document.getElementById("skillsChart");
+  if(!ctx) return;
+
+  if(SKILL_BAR_CHART){
+    SKILL_BAR_CHART.destroy();
+  }
+
+  const values =
+    SKILL_NAMES.map(skill => Number(SKILL_SCORES[skill] || 0));
+
+  SKILL_BAR_CHART = new Chart(ctx,{
+    type:"bar",
+    data:{
+      labels:SKILL_NAMES,
+      datasets:[{
+        label:"Score",
+        data:values,
+        backgroundColor:[
+          "#1abc9c",
+          "#3498db",
+          "#9b59b6",
+          "#e67e22",
+          "#f1c40f",
+          "#164478"
+        ],
+        borderRadius:10
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false}
+      },
+      scales:{
+        y:{
+          beginAtZero:true,
+          max:10,
+          ticks:{stepSize:1}
+        }
+      }
+    }
+  });
+
+}
+
+function renderSkillRadarChart(){
+
+  const ctx = document.getElementById("summaryChart");
+  if(!ctx) return;
+
+  if(SUMMARY_CHART){
+    SUMMARY_CHART.destroy();
+  }
+
+  const values =
+    SKILL_NAMES.map(skill => Number(SKILL_SCORES[skill] || 0));
+
+  SUMMARY_CHART = new Chart(ctx,{
+    type:"radar",
+    data:{
+      labels:SKILL_NAMES,
+      datasets:[{
+        label:"Skills",
+        data:values,
+        backgroundColor:"rgba(22,68,120,0.18)",
+        borderColor:"#164478",
+        pointBackgroundColor:"#164478"
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      scales:{
+        r:{
+          beginAtZero:true,
+          max:10,
+          ticks:{stepSize:2}
+        }
+      }
+    }
+  });
+
+}
+
+function renderWeakStrongSkillChart(){
+
+  const ctx = document.getElementById("weakStrongChart");
+  if(!ctx) return;
+
+  if(WEAK_STRONG_CHART){
+    WEAK_STRONG_CHART.destroy();
+  }
+
+  const values =
+    SKILL_NAMES.map(skill => Number(SKILL_SCORES[skill] || 0))
+      .filter(v => v > 0);
+
+  const weak =
+    values.filter(v => v <= 5).length;
+
+  const strong =
+    values.filter(v => v > 5).length;
+
+  WEAK_STRONG_CHART = new Chart(ctx,{
+    type:"doughnut",
+    data:{
+      labels:["Weak Skills","Strong Skills"],
+      datasets:[{
+        data:[weak,strong],
+        backgroundColor:["#e74c3c","#1abc9c"]
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{
+          position:"bottom"
+        }
+      }
+    }
+  });
+
+}
+function getPlanColorClass(text){
+
+  const t = String(text || "").trim().toLowerCase();
+
+  if(!t) return "";
+
+  if(t.includes("final exam") || t.includes("final")){
+    return "plan-final";
+  }
+
+  if(t.includes("midterm exam") || t.includes("midterm")){
+    return "plan-midterm";
+  }
+
+  if(t.includes("quiz")){
+    return "plan-quiz";
+  }
+
+  if(
+    t.includes("activity") ||
+    t.includes("reading") ||
+    t.includes("listening") ||
+    t.includes("speaking") ||
+    t.includes("writing") ||
+    t.includes("grammar") ||
+    t.includes("vocabulary") ||
+    t.includes("skills")
+  ){
+    return "plan-activity";
+  }
+
+  return "plan-normal";
+}
+/* ================= STUDY PLAN LIVE (StudyPlans) ================= */
+function renderPlanLive(COURSE){
+  const days=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس"];
+  const duration = Number(COURSE.Duration)||Number(COURSE.Weeks)||8;
+
+  const start = COURSE.StartingDate ? new Date(COURSE.StartingDate) : null;
+  const now = new Date();
+  const currentWeek = start ? Math.floor((now-start)/(1000*60*60*24*7))+1 : -1;
+
+  if(!duration){
+    weeklyPlan.innerHTML = '<p class="hint">مدة الدورة غير موجودة (Duration)</p>';
+    return;
+  }
+
+  if(unsubStudyPlan){unsubStudyPlan();unsubStudyPlan=null;}
+
+  unsubStudyPlan = db.collection("StudyPlans")
+    .where("courseId","==",COURSE.id)
+    .onSnapshot(snap=>{
+      const map={};
+      snap.forEach(d=>{
+        const p=d.data()||{};
+        map[`${p.week}_${p.day}`]=p.activity||"";
+      });
+
+      let html="<table><tr><th>الأسبوع</th>";
+      days.forEach(d=>html+=`<th>${d}</th>`);
+      html+="</tr>";
+
+      for(let w=1; w<=duration; w++){
+        html += `<tr class="${w===currentWeek?'current-week':''}">
+          <td>الأسبوع ${w}</td>`;
+        days.forEach(d=>{
+         const activity = map[`${w}_${d}`] || "";
+const cls = getPlanColorClass(activity);
+
+html += `
+  <td class="${cls}" style="white-space:pre-wrap;line-height:1.5">
+    ${escapeHtml(activity)}
+  </td>
+`;
+        });
+        html += `</tr>`;
+      }
+
+      weeklyPlan.innerHTML = html + "</table>";
+    }, err=>{
+      console.error(err);
+      weeklyPlan.innerHTML = '<p class="hint">تعذر تحميل الخطة. تحقق من صلاحيات Firestore.</p>';
+    });
+}
+
+/* ================= PDF REPORT (ENGLISH, FULL) ================= */
+async function exportPDFReport(){
+
+  if(CURRENT_INDEX<0){
+    alert("اختر دورة أولاً");
+    return;
+  }
+
+  const {jsPDF} =
+    window.jspdf;
+
+  const doc =
+    new jsPDF(
+      "p",
+      "mm",
+      "a4"
+    );
+
+  const BLUE=[22,68,120];
+  const LIGHT_BLUE=[240,246,252];
+  const GOLD=[244,185,66];
+  const GREEN=[23,166,115];
+  const RED=[231,76,60];
+  const GREY=[95,112,135];
+
+  const data =
+    COURSES[CURRENT_INDEX];
+
+  const STUDENT =
+    data.student;
+
+  const COURSE =
+    data.course;
+
+  const pageWidth =
+    doc.internal.pageSize.getWidth();
+
+  const pageHeight =
+    doc.internal.pageSize.getHeight();
+
+  function drawPageHeader(
+    title,
+    subtitle=""
+  ){
+
+    doc.setFillColor(...BLUE);
+    doc.roundedRect(
+      7,
+      7,
+      pageWidth-14,
+      25,
+      3,
+      3,
+      "F"
+    );
+
+    doc.setTextColor(255);
+    doc.setFontSize(15);
+    doc.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    doc.text(
+      title,
+      pageWidth/2,
+      19,
+      {align:"center"}
+    );
+
+    if(subtitle){
+      doc.setFontSize(8.5);
+      doc.setFont(
+        "helvetica",
+        "normal"
+      );
+      doc.text(
+        subtitle,
+        pageWidth/2,
+        26,
+        {align:"center"}
+      );
+    }
+
+    doc.setTextColor(0);
+  }
+
+
+  function drawSectionTitle(
+    title,
+    y
+  ){
+
+    doc.setFillColor(...LIGHT_BLUE);
+    doc.roundedRect(
+      10,
+      y,
+      pageWidth-20,
+      10,
+      2,
+      2,
+      "F"
+    );
+
+    doc.setTextColor(...BLUE);
+    doc.setFontSize(11);
+    doc.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    doc.text(
+      title,
+      14,
+      y+6.5
+    );
+
+    doc.setTextColor(0);
+
+    return y+13;
+  }
+
+
+  function addFooter(
+    pageNumber
+  ){
+
+    doc.setDrawColor(
+      220,
+      230,
+      239
+    );
+
+    doc.line(
+      10,
+      pageHeight-12,
+      pageWidth-10,
+      pageHeight-12
+    );
+
+    doc.setFontSize(8);
+    doc.setTextColor(...GREY);
+
+    doc.text(
+      "Prudle Institute — Student Academic Report",
+      10,
+      pageHeight-7
+    );
+
+    doc.text(
+      `Page ${pageNumber}`,
+      pageWidth-10,
+      pageHeight-7,
+      {align:"right"}
+    );
+
+    doc.setTextColor(0);
+  }
+
+
+  /* =====================================================
+     PAGE 1 — ACADEMIC SUMMARY
+  ===================================================== */
+
+  drawPageHeader(
+    "Prudle – Student Academic Report",
+    "Academic Summary"
+  );
+
+  await tryAddImage(
+    doc,
+    PDF_LOGO_URL,
+    12,
+    9,
+    20,
+    20
+  );
+
+  doc.autoTable({
+    startY:37,
+    theme:"grid",
+    margin:{left:10,right:10},
+    head:[
+      [
+        "Student Information",
+        "Details"
+      ]
+    ],
+    body:[
+      ["Name",STUDENT.name || "-"],
+      ["ID / Iqama",STUDENT.iqama || "-"],
+      [
+        "Course",
+        COURSE.TrainingCourse ||
+        COURSE.CourseName ||
+        "-"
+      ],
+      ["Trainer",COURSE.Trainer || "-"],
+      ["Period",COURSE.Period || "-"],
+      ["Start Date",COURSE.StartingDate || "-"]
+    ],
+    headStyles:{
+      fillColor:BLUE,
+      textColor:255,
+      fontStyle:"bold"
+    },
+    styles:{
+      fontSize:9,
+      cellPadding:3
+    },
+    columnStyles:{
+      0:{
+        fontStyle:"bold",
+        fillColor:LIGHT_BLUE,
+        cellWidth:48
+      }
+    }
+  });
+
+  const att =
+    calcAttendanceScore(
+      STUDENT
+    );
+
+  const records =
+    Array.isArray(STUDENT.records)
+      ? STUDENT.records
+      : [];
+
+  const present =
+    records.filter(
+      x=>x && x.status==="present"
+    ).length;
+
+  const absent =
+    records.filter(
+      x=>x && x.status==="absent"
+    ).length;
+
+  doc.autoTable({
+    startY:
+      doc.lastAutoTable.finalY+5,
+    theme:"grid",
+    margin:{left:10,right:10},
+    head:[
+      [
+        "Attendance",
+        "Value"
+      ]
+    ],
+    body:[
+      ["Present Days",String(present)],
+      ["Absent Days",String(absent)],
+      [
+        "Attendance Score",
+        att==null
+          ? "-"
+          : `${att} / 10`
+      ]
+    ],
+    headStyles:{
+      fillColor:BLUE,
+      textColor:255
+    },
+    styles:{
+      fontSize:9,
+      cellPadding:3
+    }
+  });
+
+  const midV=STUDENT.midterm;
+  const finV=STUDENT.finalExam;
+  const homeV=STUDENT.hwScore;
+  const speakV=STUDENT.speaking;
+  const listenV=STUDENT.listening;
+
+  const isComplete =
+    midV!=null &&
+    finV!=null &&
+    homeV!=null &&
+    speakV!=null &&
+    listenV!=null &&
+    att!=null;
+
+  let total=null;
+  let statusText="-";
+
+  if(isComplete){
+
+    total =
+      Number(midV)+
+      Number(finV)+
+      Number(homeV)+
+      Number(speakV)+
+      Number(listenV)+
+      Number(att);
+
+    statusText =
+      gradeLabel(total).lbl;
+  }
+
+  const gradesBody=[
+    ["Midterm",midV ?? "-"],
+    ["Final Exam",finV ?? "-"],
+    ["Homework",homeV ?? "-"],
+    ["Attendance",att ?? "-"],
+    ["Listening",listenV ?? "-"],
+    ["Speaking",speakV ?? "-"]
+  ];
+
+  if(total!=null){
+    gradesBody.push(
+      ["TOTAL",`${total} / 100`]
+    );
+    gradesBody.push(
+      ["Final Status",statusText]
+    );
+  }
+
+  doc.autoTable({
+    startY:
+      doc.lastAutoTable.finalY+5,
+    theme:"grid",
+    margin:{left:10,right:10},
+    head:[
+      [
+        "Course Grades",
+        "Value"
+      ]
+    ],
+    body:gradesBody,
+    headStyles:{
+      fillColor:BLUE,
+      textColor:255
+    },
+    styles:{
+      fontSize:9,
+      cellPadding:3
+    },
+    didParseCell(d){
+
+      if(!d.row.raw){
+        return;
+      }
+
+      const rowTitle =
+        d.row.raw[0];
+
+      const rowValue =
+        d.row.raw[1];
+
+      if(rowTitle==="TOTAL"){
+        d.cell.styles.fontStyle="bold";
+        d.cell.styles.fillColor=[232,245,238];
+      }
+
+      if(rowTitle==="Final Status"){
+
+        d.cell.styles.fontStyle="bold";
+
+        if(rowValue==="Excellent"){
+          d.cell.styles.fillColor=[46,204,113];
+          d.cell.styles.textColor=[255,255,255];
+        }else if(rowValue==="Very Good"){
+          d.cell.styles.fillColor=[39,174,96];
+          d.cell.styles.textColor=[255,255,255];
+        }else if(rowValue==="Good"){
+          d.cell.styles.fillColor=[241,196,15];
+          d.cell.styles.textColor=[0,0,0];
+        }else if(rowValue==="Pass"){
+          d.cell.styles.fillColor=[230,126,34];
+          d.cell.styles.textColor=[255,255,255];
+        }else if(rowValue==="Failed"){
+          d.cell.styles.fillColor=[231,76,60];
+          d.cell.styles.textColor=[255,255,255];
+        }
+      }
+    }
+  });
+
+  addFooter(1);
+
+
+  /* =====================================================
+     PAGE 2 — TRAINER COMMENT + ACTIVITIES + SKILLS
+  ===================================================== */
+
+  doc.addPage();
+
+  drawPageHeader(
+    "Academic Performance Details",
+    `${COURSE.TrainingCourse || COURSE.CourseName || "Course"} — ${STUDENT.name || "Student"}`
+  );
+
+  let y=38;
+
+
+  /* ---------- Trainer Comment ---------- */
+
+  y =
+    drawSectionTitle(
+      "Trainer Comment",
+      y
+    );
+
+  const commentText =
+    String(
+      STUDENT.trainerComment ||
+      "No trainer comment has been added yet."
+    );
+
+  const commentLines =
+    doc.splitTextToSize(
+      commentText,
+      pageWidth-34
+    );
+
+  const commentHeight =
+    Math.max(
+      24,
+      commentLines.length*5 + 13
+    );
+
+  doc.setFillColor(
+    249,
+    251,
+    253
+  );
+
+  doc.setDrawColor(
+    218,
+    229,
+    239
+  );
+
+  doc.roundedRect(
+    12,
+    y,
+    pageWidth-24,
+    commentHeight,
+    3,
+    3,
+    "FD"
+  );
+
+  doc.setTextColor(...GREY);
+  doc.setFontSize(8);
+  doc.text(
+    "Trainer feedback and academic guidance",
+    16,
+    y+7
+  );
+
+  doc.setTextColor(25,45,65);
+  doc.setFontSize(10);
+
+  doc.text(
+    commentLines,
+    16,
+    y+14,
+    {
+      maxWidth:pageWidth-32
+    }
+  );
+
+  y +=
+    commentHeight + 7;
+
+
+  /* ---------- Previous Activity Grades ---------- */
+
+  y =
+    drawSectionTitle(
+      "Solved Activity Grades",
+      y
+    );
+
+  const activityRows =
+    ACTIVITY_HISTORY.length
+      ? ACTIVITY_HISTORY.map(
+          (item,index)=>[
+            String(index+1),
+            item.title || "Activity",
+            item.total > 0
+              ? `${item.score} / ${item.total}`
+              : String(item.score),
+            `${item.percent}%`,
+            item.date || "-"
+          ]
+        )
+      : [
+          [
+            "-",
+            "No solved activity results found",
+            "-",
+            "-",
+            "-"
+          ]
+        ];
+
+  doc.autoTable({
+    startY:y,
+    theme:"grid",
+    margin:{
+      left:12,
+      right:12
+    },
+    head:[
+      [
+        "#",
+        "Solved Activity / Quiz",
+        "Correct / Total",
+        "Grade",
+        "Date"
+      ]
+    ],
+    body:activityRows,
+    headStyles:{
+      fillColor:BLUE,
+      textColor:255,
+      fontStyle:"bold",
+      halign:"center"
+    },
+    styles:{
+      fontSize:8,
+      cellPadding:2.5,
+      overflow:"linebreak",
+      valign:"middle"
+    },
+    columnStyles:{
+      0:{
+        cellWidth:10,
+        halign:"center"
+      },
+      1:{
+        cellWidth:78
+      },
+      2:{
+        cellWidth:31,
+        halign:"center"
+      },
+      3:{
+        cellWidth:28,
+        halign:"center",
+        fontStyle:"bold"
+      },
+      4:{
+        cellWidth:31,
+        halign:"center"
+      }
+    },
+    didParseCell(d){
+
+      if(
+        d.section==="body" &&
+        d.column.index===3
+      ){
+
+        const pct =
+          Number(
+            String(
+              d.cell.raw || ""
+            ).replace("%","")
+          );
+
+        if(pct>=80){
+          d.cell.styles.fillColor=[232,248,241];
+          d.cell.styles.textColor=[20,120,80];
+        }else if(pct>=60){
+          d.cell.styles.fillColor=[255,247,218];
+          d.cell.styles.textColor=[126,91,0];
+        }else if(Number.isFinite(pct)){
+          d.cell.styles.fillColor=[255,236,233];
+          d.cell.styles.textColor=[170,50,40];
+        }
+      }
+    }
+  });
+
+  y =
+    doc.lastAutoTable.finalY + 6;
+
+
+  /* ---------- Final Activity Average ---------- */
+
+  if(
+    ACTIVITY_FINAL_AVERAGE !== null
+  ){
+
+    const avg =
+      Number(
+        ACTIVITY_FINAL_AVERAGE
+      );
+
+    let avgColor =
+      GREEN;
+
+    let avgLabel =
+      "Excellent";
+
+    if(avg < 60){
+      avgColor = RED;
+      avgLabel = "Needs Improvement";
+    }else if(avg < 80){
+      avgColor = GOLD;
+      avgLabel = "Good";
+    }
+
+    doc.setFillColor(
+      246,
+      249,
+      252
+    );
+
+    doc.setDrawColor(
+      218,
+      229,
+      239
+    );
+
+    doc.roundedRect(
+      12,
+      y,
+      pageWidth-24,
+      18,
+      3,
+      3,
+      "FD"
+    );
+
+    doc.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    doc.setFontSize(10);
+    doc.setTextColor(...BLUE);
+
+    doc.text(
+      "Final Activities Average",
+      17,
+      y+7
+    );
+
+    doc.setTextColor(...avgColor);
+    doc.setFontSize(14);
+
+    doc.text(
+      `${avg}%`,
+      pageWidth-18,
+      y+8,
+      {
+        align:"right"
+      }
+    );
+
+    doc.setFontSize(8);
+    doc.text(
+      avgLabel,
+      pageWidth-18,
+      y+14,
+      {
+        align:"right"
+      }
+    );
+
+    doc.setTextColor(0);
+
+    y += 25;
+
+  }
+
+
+  /*
+    إذا أصبح جدول النشاطات طويلاً ووصل قرب نهاية الصفحة،
+    AutoTable ينشئ صفحات إضافية تلقائياً.
+  */
+  if(y > pageHeight-92){
+    doc.addPage();
+    drawPageHeader(
+      "Academic Performance Details",
+      "Skills Evaluation"
+    );
+    y=38;
+  }
+
+
+  /* ---------- Skill Evaluation ---------- */
+
+  y =
+    drawSectionTitle(
+      "Skill Evaluation",
+      y
+    );
+
+  const skillRows =
+    SKILL_NAMES.map(
+      skill=>{
+
+        const value =
+          Number(
+            SKILL_SCORES[skill] || 0
+          );
+
+        let level =
+          "Needs Improvement";
+
+        if(value>=8){
+          level="Strong";
+        }else if(value>=6){
+          level="Good";
+        }else if(value>0){
+          level="Developing";
+        }else{
+          level="Not Assessed";
+        }
+
+        return [
+          skill,
+          `${value} / 10`,
+          "",
+          level
+        ];
+      }
+    );
+
+  /*
+    المعدل النهائي لتقييم المهارات:
+    نحسب فقط المهارات التي تم تقييمها فعلياً (> 0)
+    حتى لا تخفض المهارات غير المقيمة المعدل.
+  */
+  const assessedSkillValues =
+    SKILL_NAMES
+      .map(
+        skill=>
+          Number(
+            SKILL_SCORES[skill] || 0
+          )
+      )
+      .filter(
+        value=>
+          Number.isFinite(value) &&
+          value > 0
+      );
+
+  const skillFinalAverage =
+    assessedSkillValues.length
+      ? (
+          assessedSkillValues.reduce(
+            (sum,value)=>sum+value,
+            0
+          ) /
+          assessedSkillValues.length
+        )
+      : null;
+
+  doc.autoTable({
+    startY:y,
+    theme:"grid",
+    margin:{
+      left:12,
+      right:12
+    },
+    head:[
+      [
+        "Skill",
+        "Score",
+        "Mini Chart",
+        "Performance"
+      ]
+    ],
+    body:skillRows,
+    headStyles:{
+      fillColor:BLUE,
+      textColor:255,
+      fontStyle:"bold",
+      halign:"center"
+    },
+    styles:{
+      fontSize:8.3,
+      cellPadding:3,
+      halign:"center",
+      valign:"middle",
+      minCellHeight:10
+    },
+    columnStyles:{
+      0:{
+        halign:"left",
+        fontStyle:"bold",
+        cellWidth:43
+      },
+      1:{
+        cellWidth:27,
+        fontStyle:"bold"
+      },
+      2:{
+        cellWidth:58
+      },
+      3:{
+        cellWidth:48
+      }
+    },
+
+    didParseCell(d){
+
+      if(
+        d.section==="body" &&
+        d.column.index===3
+      ){
+
+        const value =
+          String(
+            d.cell.raw || ""
+          );
+
+        if(value==="Strong"){
+          d.cell.styles.fillColor=[229,248,239];
+          d.cell.styles.textColor=[20,130,85];
+        }else if(value==="Good"){
+          d.cell.styles.fillColor=[235,244,253];
+          d.cell.styles.textColor=BLUE;
+        }else if(value==="Developing"){
+          d.cell.styles.fillColor=[255,246,215];
+          d.cell.styles.textColor=[130,91,0];
+        }else{
+          d.cell.styles.fillColor=[245,246,248];
+          d.cell.styles.textColor=GREY;
+        }
+      }
+    },
+
+    /*
+      رسم شريط بياني صغير بجانب كل مهارة
+      مباشرة داخل خلية Mini Chart.
+    */
+    didDrawCell(d){
+
+      if(
+        d.section!=="body" ||
+        d.column.index!==2
+      ){
+        return;
+      }
+
+      const rowIndex =
+        d.row.index;
+
+      const skill =
+        SKILL_NAMES[rowIndex];
+
+      const value =
+        Number(
+          SKILL_SCORES[skill] || 0
+        );
+
+      const x =
+        d.cell.x + 4;
+
+      const yBar =
+        d.cell.y +
+        (d.cell.height - 4.2) / 2;
+
+      const maxWidth =
+        d.cell.width - 8;
+
+      const barHeight =
+        4.2;
+
+      const safeValue =
+        Math.max(
+          0,
+          Math.min(
+            10,
+            value
+          )
+        );
+
+      const filledWidth =
+        maxWidth *
+        (safeValue / 10);
+
+      /*
+        خلفية الشريط.
+      */
+      doc.setFillColor(
+        232,
+        238,
+        244
+      );
+
+      doc.roundedRect(
+        x,
+        yBar,
+        maxWidth,
+        barHeight,
+        1.5,
+        1.5,
+        "F"
+      );
+
+      /*
+        لون الشريط حسب الدرجة.
+      */
+      if(safeValue>=8){
+        doc.setFillColor(
+          23,
+          166,
+          115
+        );
+      }else if(safeValue>=6){
+        doc.setFillColor(
+          52,
+          152,
+          219
+        );
+      }else if(safeValue>0){
+        doc.setFillColor(
+          244,
+          185,
+          66
+        );
+      }else{
+        doc.setFillColor(
+          180,
+          190,
+          200
+        );
+      }
+
+      if(filledWidth>0){
+        doc.roundedRect(
+          x,
+          yBar,
+          filledWidth,
+          barHeight,
+          1.5,
+          1.5,
+          "F"
+        );
+      }
+
+      /*
+        نقاط بداية ونهاية صغيرة لتحسين شكل الرسم.
+      */
+      doc.setDrawColor(
+        210,
+        220,
+        230
+      );
+
+      doc.setLineWidth(.2);
+
+      for(let tick=0;tick<=10;tick+=2){
+
+        const tickX =
+          x +
+          maxWidth *
+          (tick / 10);
+
+        doc.line(
+          tickX,
+          yBar + barHeight + .6,
+          tickX,
+          yBar + barHeight + 1.5
+        );
+      }
+    }
+  });
+
+  y =
+    doc.lastAutoTable.finalY + 7;
+
+
+  /* ---------- Final Skills Evaluation Average ---------- */
+
+  if(skillFinalAverage !== null){
+
+    const averageOutOf10 =
+      Math.round(
+        skillFinalAverage * 10
+      ) / 10;
+
+    const averagePercent =
+      Math.round(
+        skillFinalAverage * 10
+      );
+
+    let avgLabel =
+      "Needs Improvement";
+
+    let avgColor =
+      RED;
+
+    if(averageOutOf10>=8){
+      avgLabel="Strong";
+      avgColor=GREEN;
+    }else if(averageOutOf10>=6){
+      avgLabel="Good";
+      avgColor=[52,152,219];
+    }else if(averageOutOf10>0){
+      avgLabel="Developing";
+      avgColor=GOLD;
+    }
+
+    /*
+      إذا لم تكف المساحة، ننقل بطاقة المعدل كاملة
+      إلى الصفحة التالية.
+    */
+    if(y > pageHeight-42){
+
+      doc.addPage();
+
+      drawPageHeader(
+        "Academic Performance Details",
+        "Final Skills Evaluation"
+      );
+
+      y=39;
+    }
+
+    doc.setFillColor(
+      247,
+      250,
+      253
+    );
+
+    doc.setDrawColor(
+      215,
+      226,
+      237
+    );
+
+    doc.roundedRect(
+      12,
+      y,
+      pageWidth-24,
+      24,
+      3,
+      3,
+      "FD"
+    );
+
+    doc.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    doc.setTextColor(...BLUE);
+    doc.setFontSize(10.5);
+
+    doc.text(
+      "Final Skills Evaluation Average",
+      17,
+      y+7
+    );
+
+    doc.setTextColor(...avgColor);
+    doc.setFontSize(16);
+
+    doc.text(
+      `${averageOutOf10} / 10`,
+      pageWidth-18,
+      y+9,
+      {
+        align:"right"
+      }
+    );
+
+    doc.setFontSize(9);
+
+    doc.text(
+      `${averagePercent}%  •  ${avgLabel}`,
+      pageWidth-18,
+      y+16,
+      {
+        align:"right"
+      }
+    );
+
+    /*
+      شريط معدل عام أسفل البطاقة.
+    */
+    const avgBarX =
+      17;
+
+    const avgBarY =
+      y+18;
+
+    const avgBarWidth =
+      pageWidth-78;
+
+    const avgBarHeight =
+      3.4;
+
+    doc.setFillColor(
+      226,
+      233,
+      240
+    );
+
+    doc.roundedRect(
+      avgBarX,
+      avgBarY,
+      avgBarWidth,
+      avgBarHeight,
+      1.3,
+      1.3,
+      "F"
+    );
+
+    doc.setFillColor(
+      ...avgColor
+    );
+
+    doc.roundedRect(
+      avgBarX,
+      avgBarY,
+      avgBarWidth *
+        (
+          Math.max(
+            0,
+            Math.min(
+              10,
+              averageOutOf10
+            )
+          ) / 10
+        ),
+      avgBarHeight,
+      1.3,
+      1.3,
+      "F"
+    );
+
+    doc.setTextColor(0);
+
+    y += 30;
+  }
+
+
+  /*
+    الرسم البياني الكبير يبقى اختياريًا ومصغرًا.
+    إذا لم توجد مساحة كافية، لا يتم إضافته لأن
+    كل مهارة أصبحت تحتوي بالفعل على رسم مصغر.
+  */
+  if(
+    SKILL_BAR_CHART &&
+    y <= pageHeight-63
+  ){
+
+    try{
+
+      const img =
+        SKILL_BAR_CHART.toBase64Image();
+
+      doc.setFillColor(
+        250,
+        252,
+        254
+      );
+
+      doc.setDrawColor(
+        221,
+        231,
+        240
+      );
+
+      doc.roundedRect(
+        12,
+        y,
+        pageWidth-24,
+        48,
+        3,
+        3,
+        "FD"
+      );
+
+      doc.setFontSize(8.5);
+      doc.setTextColor(...BLUE);
+      doc.setFont(
+        "helvetica",
+        "bold"
+      );
+
+      doc.text(
+        "Skills Overview",
+        pageWidth/2,
+        y+6,
+        {align:"center"}
+      );
+
+      doc.addImage(
+        img,
+        "PNG",
+        25,
+        y+8,
+        pageWidth-50,
+        35
+      );
+
+    }catch(error){
+
+      console.warn(
+        "Unable to add skills chart:",
+        error
+      );
+    }
+  }
+
+
+  /*
+    Footer لكل الصفحات الموجودة.
+  */
+  const totalPages =
+    doc.getNumberOfPages();
+
+  for(
+    let pageNo=2;
+    pageNo<=totalPages;
+    pageNo++
+  ){
+    doc.setPage(pageNo);
+    addFooter(pageNo);
+  }
+
+  const safeName =
+    String(
+      STUDENT.name ||
+      "Student"
+    )
+    .replace(
+      /[\\/:*?"<>|]/g,
+      "-"
+    );
+
+  doc.save(
+    `Prudle_Report_${safeName}.pdf`
+  );
+}
+
+/* ================= MNAR ================= */
+function goToMNAR(){
+  window.open("https://mnar.sa/","_blank");
+}
+
+/* ================= HELPERS ================= */
+function escapeHtml(str){
+  return String(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function tryLoadImage(url){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.crossOrigin="anonymous";
+    img.onload=()=>resolve(img);
+    img.onerror=reject;
+    img.src=url;
+  });
+}
+
+async function tryAddImage(doc, url, x,y,w,h){
+  try{
+    const img = await tryLoadImage(url);
+    const canvas=document.createElement("canvas");
+    canvas.width=img.naturalWidth;
+    canvas.height=img.naturalHeight;
+    const ctx=canvas.getContext("2d");
+    ctx.drawImage(img,0,0);
+    const dataURL=canvas.toDataURL("image/png");
+    doc.addImage(dataURL,"PNG",x,y,w,h);
+  }catch(e){
+    // ignore
+  }
+}
+</script>
+
+</body>
+</html>

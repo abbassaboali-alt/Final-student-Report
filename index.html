@@ -370,7 +370,7 @@ const UI_TEXT = {
     course:"الدورة", trainer:"المدرب", period:"الفترة", start:"تاريخ البدء",
     notFound:"الطالب غير موجود", enterId:"أدخل رقم الهوية",
     enterLast4:"أدخل آخر 4 أرقام", wrongLast4:"آخر 4 أرقام غير صحيحة",
-    loadError:T("loadError"),
+    loadError:"تعذر تحميل بيانات الطالب. حاول مرة أخرى.",
     present:"حاضر", absent:"غائب"
   },
   en:{
@@ -434,7 +434,8 @@ async function applyReportLanguage(){
   document.documentElement.lang=REPORT_LANGUAGE;
   document.documentElement.dir=REPORT_LANGUAGE==="ar"?"rtl":"ltr";
   document.body.style.direction=REPORT_LANGUAGE==="ar"?"rtl":"ltr";
-  if(languageSelector) languageSelector.value=REPORT_LANGUAGE;
+  const languageSelectorEl=document.getElementById("languageSelector");
+  if(languageSelectorEl) languageSelectorEl.value=REPORT_LANGUAGE;
 
   setTextIf("headerTitle",T("header"));
   setTextIf("languageLabel",T("language"));
@@ -1679,7 +1680,7 @@ function pdfArabicGradeLabel(value){
 }
 
 /* ================= PDF REPORT (ARABIC, FULL) ================= */
-async async function exportPDFReportArabic(){
+async function exportPDFReportArabic(){
 
   if(CURRENT_INDEX<0){
     alert("اختر دورة أولاً");

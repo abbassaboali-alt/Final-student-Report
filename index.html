@@ -1536,6 +1536,27 @@ function reportPerformance(value,lang){
   return lang==="ar"?"لم يتم التقييم":"Not Assessed";
 }
 
+
+async function translateStudentNameForReport(name,lang){
+  const value=String(name||"").trim();
+  if(!value || lang!=="ar") return value || "-";
+
+  // If the stored name is already Arabic, use it directly.
+  if(/[\u0600-\u06FF]/.test(value)) return value;
+
+  try{
+    const url="https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ar&dt=t&q="+encodeURIComponent(value);
+    const res=await fetch(url);
+    if(!res.ok) throw new Error("Name translation HTTP "+res.status);
+    const data=await res.json();
+    const translated=(data?.[0]||[]).map(x=>x?.[0]||"").join("").trim();
+    return translated || value;
+  }catch(err){
+    console.warn("Student name Arabic translation fallback:",err);
+    return value;
+  }
+}
+
 async function translateReportComment(text,lang){
   const value=String(text||"").trim();
   if(!value) return lang==="ar"?"لا يوجد تعليق من المدرب.":"No trainer comment has been added.";
@@ -1568,7 +1589,7 @@ function reportChartImage(chart){
   try{return chart ? chart.toBase64Image() : "";}catch(e){return "";}
 }
 
-function buildProfessionalReportPages(lang,STUDENT,COURSE,comment){
+function buildProfessionalReportPages(lang,STUDENT,COURSE,comment,studentDisplayName){
   const ar=lang==="ar";
   const records=Array.isArray(STUDENT.records)?STUDENT.records:[];
   const present=records.filter(x=>x?.status==="present").length;
@@ -1618,7 +1639,7 @@ function buildProfessionalReportPages(lang,STUDENT,COURSE,comment){
   };
 
   const info=[
-    [T.name,STUDENT.name||"-"],[T.id,reportIdentityValue(STUDENT)],
+    [T.name,studentDisplayName||STUDENT.name||"-"],[T.id,reportIdentityValue(STUDENT)],
     [T.course,reportCourseName(COURSE)],[T.trainer,reportTrainerName(COURSE)],
     [T.period,reportPeriodValue(COURSE)],[T.start,reportStartDate(COURSE)]
   ];
@@ -1732,6 +1753,7 @@ async function exportPDFReport(){
   const lang=document.getElementById("pdfLanguage")?.value || "ar";
   const {student:STUDENT,course:COURSE}=COURSES[CURRENT_INDEX];
   const comment=await translateReportComment(STUDENT.trainerComment,lang);
+  const studentDisplayName=await translateStudentNameForReport(STUDENT.name,lang);
 
   const host=document.createElement("div");
   host.id="prudlePdfHost";
@@ -1769,7 +1791,7 @@ async function exportPDFReport(){
     .footer{position:absolute;bottom:18px;left:38px;right:38px;border-top:1px solid #e0e6ec;padding-top:8px;display:flex;justify-content:space-between;color:#8795a6;font-size:9px;font-weight:700}
     [dir="rtl"] .hero{grid-template-columns:82px 1fr 130px}
   </style>
-  ${buildProfessionalReportPages(lang,STUDENT,COURSE,comment)}`;
+  ${buildProfessionalReportPages(lang,STUDENT,COURSE,comment,studentDisplayName)}`;
   document.body.appendChild(host);
 
   try{

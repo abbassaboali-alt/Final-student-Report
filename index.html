@@ -355,7 +355,93 @@ let ACTIVITY_HISTORY = [];
 let ACTIVITY_FINAL_AVERAGE = null;
 let COURSE_LOAD_TOKEN = 0;
 let LOGIN_IN_PROGRESS = false;
+
 let LAST_RENDERED_COURSE_KEY = "";
+
+/* ================= AUTO TRANSLATION: TRAINER COMMENT ================= */
+const TRAINER_COMMENT_TRANSLATION_CACHE = new Map();
+const TRAINER_COMMENT_TRANSLATION_PENDING = new Map();
+let CURRENT_TRANSLATED_TRAINER_COMMENT = "";
+
+function cleanTranslationText(value){
+  return String(value ?? "").trim();
+}
+
+function containsArabicText(text){
+  return /[\u0600-\u06FF]/.test(String(text || ""));
+}
+
+function containsEnglishText(text){
+  return /[A-Za-z]/.test(String(text || ""));
+}
+
+async function googleTranslateTrainerCommentToArabic(text){
+  text = cleanTranslationText(text);
+
+  if(!text || text === "—"){
+    return "—";
+  }
+
+  // إذا كان التعليق عربياً فقط، لا نرسله إلى Google.
+  if(containsArabicText(text) && !containsEnglishText(text)){
+    return text;
+  }
+
+  const cacheKey = text.toLowerCase();
+
+  if(TRAINER_COMMENT_TRANSLATION_CACHE.has(cacheKey)){
+    return TRAINER_COMMENT_TRANSLATION_CACHE.get(cacheKey);
+  }
+
+  if(TRAINER_COMMENT_TRANSLATION_PENDING.has(cacheKey)){
+    return TRAINER_COMMENT_TRANSLATION_PENDING.get(cacheKey);
+  }
+
+  const promise = (async ()=>{
+    try{
+      const url =
+        "https://translate.googleapis.com/translate_a/single" +
+        "?client=gtx" +
+        "&sl=auto" +
+        "&tl=ar" +
+        "&dt=t" +
+        "&q=" + encodeURIComponent(text);
+
+      const response = await fetch(url);
+
+      if(!response.ok){
+        throw new Error("Google Translate request failed");
+      }
+
+      const data = await response.json();
+
+      let translated = "";
+
+      if(Array.isArray(data) && Array.isArray(data[0])){
+        translated = data[0]
+          .map(part => Array.isArray(part) ? (part[0] || "") : "")
+          .join("")
+          .trim();
+      }
+
+      const result = translated || text;
+      TRAINER_COMMENT_TRANSLATION_CACHE.set(cacheKey, result);
+      return result;
+
+    }catch(error){
+      console.warn("Trainer comment translation error:", error);
+      TRAINER_COMMENT_TRANSLATION_CACHE.set(cacheKey, text);
+      return text;
+
+    }finally{
+      TRAINER_COMMENT_TRANSLATION_PENDING.delete(cacheKey);
+    }
+  })();
+
+  TRAINER_COMMENT_TRANSLATION_PENDING.set(cacheKey, promise);
+  return promise;
+}
+
 
 let unsubStudyPlan=null;
 
@@ -706,8 +792,24 @@ async function loadCourse(loadToken = COURSE_LOAD_TOKEN){
   courseInfo.textContent =
     `الدورة: ${COURSE.TrainingCourse||COURSE.CourseName||"-"} | المدرب: ${COURSE.Trainer||"-"} | الفترة: ${COURSE.Period||"-"} | تاريخ البدء: ${COURSE.StartingDate||"-"}`;
 
+  const originalTrainerComment =
+    cleanTranslationText(STUDENT.trainerComment || "");
+
   trainerComment.textContent =
-    STUDENT.trainerComment || "—";
+    originalTrainerComment ? "جاري ترجمة تعليق المدرب..." : "—";
+
+  CURRENT_TRANSLATED_TRAINER_COMMENT =
+    originalTrainerComment
+      ? await googleTranslateTrainerCommentToArabic(originalTrainerComment)
+      : "—";
+
+  // لا نعرض نتيجة دورة قديمة إذا غيّر الطالب الدورة أثناء الترجمة.
+  if(loadToken !== COURSE_LOAD_TOKEN){
+    return;
+  }
+
+  trainerComment.textContent =
+    CURRENT_TRANSLATED_TRAINER_COMMENT || "—";
 
   renderAttendance(STUDENT);
 
@@ -1857,6 +1959,7 @@ async function exportPDFReport(){
 
   const commentText =
     String(
+      CURRENT_TRANSLATED_TRAINER_COMMENT ||
       STUDENT.trainerComment ||
       "No trainer comment has been added yet."
     );

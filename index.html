@@ -548,13 +548,11 @@ function trainerDisplayName(course){
 function periodDisplayValue(course){
   const raw=String(course?.Period||course?.period||course?.Time||course?.time||course?.CoursePeriod||course?.coursePeriod||"").trim();
   if(!raw) return "-";
-  const compact=raw.replace(/\s+/g,"");
-  const standard={
-    "4":"4:00 PM - 6:00 PM","4:00":"4:00 PM - 6:00 PM","4:00PM":"4:00 PM - 6:00 PM",
-    "6":"6:00 PM - 8:00 PM","6:00":"6:00 PM - 8:00 PM","6:00PM":"6:00 PM - 8:00 PM",
-    "8":"8:00 PM - 10:00 PM","8:00":"8:00 PM - 10:00 PM","8:00PM":"8:00 PM - 10:00 PM"
-  };
-  return standard[compact]||raw;
+  const x=raw.toLowerCase().replace(/\s+/g,"");
+  if(["4","4:00","4:00pm","4pm"].includes(x)) return "4 - 6";
+  if(["6","6:00","6:00pm","6pm"].includes(x)) return "6 - 8";
+  if(["8","8:00","8:00pm","8pm"].includes(x)) return "8 - 10";
+  return raw;
 }
 function startDateDisplayValue(course){
   return String(course?.StartingDate||course?.startingDate||course?.StartDate||course?.startDate||"-").trim()||"-";
@@ -1682,6 +1680,23 @@ function addProfessionalPdfBranding(doc,language){
   }
 }
 
+
+function executiveTableStyles(language){
+  return {font:language==="ar"?"PrudleArabic":"helvetica",fontSize:9,cellPadding:3.1,halign:"center",valign:"middle",overflow:"linebreak"};
+}
+function executiveHeadStyles(language){
+  return {font:language==="ar"?"PrudleArabic":"helvetica",fontStyle:"bold",fillColor:[22,68,120],textColor:255,halign:"center",valign:"middle",lineWidth:.1,lineColor:[215,223,232]};
+}
+function finalStatusColor(total){
+  const n=Number(total);
+  if(!Number.isFinite(n)) return [100,116,139];
+  if(n>=90) return [22,163,74];
+  if(n>=80) return [5,150,105];
+  if(n>=70) return [217,119,6];
+  if(n>=65) return [234,88,12];
+  return [220,38,38];
+}
+
 /* ================= PDF CHARTS - SAME CONTENT IN BOTH LANGUAGES ================= */
 function addAllSkillChartsPage(doc, language){
   const isAr = language==="ar";
@@ -2043,14 +2058,14 @@ async function exportPDFReportArabic(){
     ],
     headStyles:{
       font:"PrudleArabic",
-      halign:"right",
+      halign:"center",
       fillColor:BLUE,
       textColor:255,
       fontStyle:"bold"
     },
     styles:{
       font:"PrudleArabic",
-      halign:"right",
+      halign:"center",
       fontSize:9,
       cellPadding:3
     },
@@ -2106,13 +2121,13 @@ async function exportPDFReportArabic(){
     ],
     headStyles:{
       font:"PrudleArabic",
-      halign:"right",
+      halign:"center",
       fillColor:BLUE,
       textColor:255
     },
     styles:{
       font:"PrudleArabic",
-      halign:"right",
+      halign:"center",
       fontSize:9,
       cellPadding:3
     }
@@ -2181,13 +2196,13 @@ async function exportPDFReportArabic(){
     body:gradesBody,
     headStyles:{
       font:"PrudleArabic",
-      halign:"right",
+      halign:"center",
       fillColor:BLUE,
       textColor:255
     },
     styles:{
       font:"PrudleArabic",
-      halign:"right",
+      halign:"center",
       fontSize:9,
       cellPadding:3
     },
@@ -2400,7 +2415,7 @@ async function exportPDFReportArabic(){
     body:activityRows,
     headStyles:{
       font:"PrudleArabic",
-      halign:"right",
+      halign:"center",
       fillColor:BLUE,
       textColor:255,
       fontStyle:"bold",
@@ -2408,7 +2423,7 @@ async function exportPDFReportArabic(){
     },
     styles:{
       font:"PrudleArabic",
-      halign:"right",
+      halign:"center",
       fontSize:8,
       cellPadding:2.5,
       overflow:"linebreak",
@@ -2659,7 +2674,7 @@ async function exportPDFReportArabic(){
     body:skillRows,
     headStyles:{
       font:"PrudleArabic",
-      halign:"right",
+      halign:"center",
       fillColor:BLUE,
       textColor:255,
       fontStyle:"bold",
@@ -2667,7 +2682,7 @@ async function exportPDFReportArabic(){
     },
     styles:{
       font:"PrudleArabic",
-      halign:"right",
+      halign:"center",
       fontSize:8.3,
       cellPadding:3,
       halign:"center",
@@ -2676,7 +2691,7 @@ async function exportPDFReportArabic(){
     },
     columnStyles:{
       0:{
-        halign:"left",
+        halign:"center",
         fontStyle:"bold",
         cellWidth:43
       },
@@ -3118,9 +3133,9 @@ async function exportPDFReportEnglish(){
       ["Period",periodDisplayValue(COURSE)],
       ["Start Date",startDateDisplayValue(COURSE)]
     ],
-    headStyles:{fillColor:BLUE,textColor:255,fontStyle:"bold"},
-    styles:{font:"helvetica",fontSize:9,cellPadding:3},
-    columnStyles:{0:{fontStyle:"bold",fillColor:LIGHT,cellWidth:48}}
+    headStyles:{...executiveHeadStyles("en")},
+    styles:{...executiveTableStyles("en")},
+    columnStyles:{0:{fontStyle:"bold",fillColor:LIGHT,cellWidth:48,halign:"center"}}
   });
 
   let sectionY=doc.lastAutoTable.finalY+7;
@@ -3134,8 +3149,8 @@ async function exportPDFReportEnglish(){
       ["Absent Days",String(absent)],
       ["Attendance Score",att==null?"-":`${att} / 10`]
     ],
-    headStyles:{fillColor:BLUE,textColor:255},
-    styles:{font:"helvetica",fontSize:9,cellPadding:3}
+    headStyles:{...executiveHeadStyles("en")},
+    styles:{...executiveTableStyles("en")}
   });
 
   const grades=[
@@ -3153,8 +3168,22 @@ async function exportPDFReportEnglish(){
   doc.autoTable({
     startY:sectionY+3,theme:"grid",
     head:[["Assessment","Value"]],body:grades,
-    headStyles:{fillColor:BLUE,textColor:255},
-    styles:{font:"helvetica",fontSize:9,cellPadding:3}
+    headStyles:{...executiveHeadStyles("en")},
+    styles:{...executiveTableStyles("en")}
+,
+    didParseCell:(data)=>{
+      if(data.section!=="body") return;
+      const title=String(data.row.raw?.[0]||"");
+      if(title==="TOTAL"){
+        data.cell.styles.fontStyle="bold";
+        data.cell.styles.fillColor=[232,245,238];
+      }
+      if(title==="Final Status"){
+        data.cell.styles.fontStyle="bold";
+        data.cell.styles.textColor=[255,255,255];
+        data.cell.styles.fillColor=finalStatusColor(total);
+      }
+    }
   });
 
   doc.addPage();
@@ -3188,8 +3217,8 @@ async function exportPDFReportEnglish(){
     startY:y,theme:"grid",
     head:[["#","Activity / Quiz","Correct / Total","Grade","Date"]],
     body:activityRows,
-    headStyles:{fillColor:BLUE,textColor:255,fontStyle:"bold"},
-    styles:{font:"helvetica",fontSize:8,cellPadding:2.5}
+    headStyles:{...executiveHeadStyles("en")},
+    styles:{...executiveTableStyles("en"),fontSize:8}
   });
   y=doc.lastAutoTable.finalY+7;
 
@@ -3211,8 +3240,8 @@ async function exportPDFReportEnglish(){
   doc.autoTable({
     startY:y,theme:"grid",
     head:[["Skill","Score","Performance"]],body:skillRows,
-    headStyles:{fillColor:BLUE,textColor:255,fontStyle:"bold"},
-    styles:{font:"helvetica",fontSize:8.5,cellPadding:3}
+    headStyles:{...executiveHeadStyles("en")},
+    styles:{...executiveTableStyles("en"),fontSize:8.5}
   });
 
   const assessed=SKILL_NAMES.map(skill=>Number(SKILL_SCORES[skill]||0)).filter(v=>Number.isFinite(v)&&v>0);

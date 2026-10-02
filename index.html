@@ -220,7 +220,7 @@ button.action{
 <div class="box login-box" id="loginBox">
   <h3 id="loginTitle">دخول الطالب/ة</h3>
 
-  <input id="identity" placeholder="رقم الهوية / الإقامة" />
+  <input id="identity" placeholder="الهوية / الإقامة" />
   <input id="last4" placeholder="آخر 4 أرقام من الهوية" inputmode="numeric" />
 
   <button id="loginBtn" onclick="login()">عرض التقرير</button>
@@ -354,7 +354,7 @@ const UI_TEXT = {
   ar:{
     header:"برودل – التقرير الأكاديمي الشامل",
     language:"اللغة", logout:"تسجيل خروج",
-    loginTitle:"دخول الطالب/ة", identity:"رقم الهوية / الإقامة",
+    loginTitle:"دخول الطالب/ة", identity:"الهوية / الإقامة",
     last4:"آخر 4 أرقام من الهوية", login:"عرض التقرير",
     chooseCourse:"— اختر الدورة لعرض البيانات —",
     chooseHint:"⬅️ الرجاء اختيار دورة",
@@ -475,6 +475,10 @@ async function applyReportLanguage(){
 
   if(CURRENT_INDEX>=0 && COURSES[CURRENT_INDEX]){
     await refreshLocalizedCourseText();
+    renderAttendance(COURSES[CURRENT_INDEX].student);
+    renderGrades(COURSES[CURRENT_INDEX].student);
+    renderPlanLive(COURSES[CURRENT_INDEX].course);
+    renderStudentSkillAnalytics();
   }
 }
 
@@ -483,10 +487,10 @@ async function refreshLocalizedCourseText(){
   if(!data) return;
   const STUDENT=data.student, COURSE=data.course;
   courseInfo.textContent =
-    `${T("course")}: ${COURSE.TrainingCourse||COURSE.CourseName||"-"} | `+
-    `${T("trainer")}: ${COURSE.Trainer||"-"} | `+
-    `${T("period")}: ${COURSE.Period||"-"} | `+
-    `${T("start")}: ${COURSE.StartingDate||"-"}`;
+    `${T("course")}: ${courseDisplayName(COURSE)} | `+
+    `${T("trainer")}: ${trainerDisplayName(COURSE)} | `+
+    `${T("period")}: ${periodDisplayValue(COURSE)} | `+
+    `${T("start")}: ${startDateDisplayValue(COURSE)}`;
 
   const originalComment=STUDENT.trainerComment || "—";
   trainerComment.textContent =
@@ -533,6 +537,30 @@ function localizedSkillName(skill){
     Vocabulary:"المفردات"
   };
   return map[skill] || skill;
+}
+
+function courseDisplayName(course){
+  return String(course?.TrainingCourse||course?.CourseName||course?.courseName||course?.Level||course?.level||"-").trim()||"-";
+}
+function trainerDisplayName(course){
+  return String(course?.Trainer||course?.trainer||course?.TrainerName||course?.trainerName||"-").trim()||"-";
+}
+function periodDisplayValue(course){
+  const raw=String(course?.Period||course?.period||course?.Time||course?.time||course?.CoursePeriod||course?.coursePeriod||"").trim();
+  if(!raw) return "-";
+  const compact=raw.replace(/\s+/g,"");
+  const standard={
+    "4":"4:00 PM - 6:00 PM","4:00":"4:00 PM - 6:00 PM","4:00PM":"4:00 PM - 6:00 PM",
+    "6":"6:00 PM - 8:00 PM","6:00":"6:00 PM - 8:00 PM","6:00PM":"6:00 PM - 8:00 PM",
+    "8":"8:00 PM - 10:00 PM","8:00":"8:00 PM - 10:00 PM","8:00PM":"8:00 PM - 10:00 PM"
+  };
+  return standard[compact]||raw;
+}
+function startDateDisplayValue(course){
+  return String(course?.StartingDate||course?.startingDate||course?.StartDate||course?.startDate||"-").trim()||"-";
+}
+function studentIdentityValue(student){
+  return String(student?.iqama||student?.studentIqama||student?.Iqama||student?.studentID||student?.StudentID||student?.ID||"-").trim()||"-";
 }
 
 
@@ -1638,6 +1666,22 @@ html += `
 }
 
 
+
+function addProfessionalPdfBranding(doc,language){
+  const isAr=language==="ar";
+  const pages=doc.getNumberOfPages();
+  const w=doc.internal.pageSize.getWidth(), h=doc.internal.pageSize.getHeight();
+  for(let n=1;n<=pages;n++){
+    doc.setPage(n);
+    doc.setDrawColor(220,228,238);
+    doc.line(12,h-10,w-12,h-10);
+    doc.setFont(isAr?"PrudleArabic":"helvetica","normal");
+    doc.setFontSize(7); doc.setTextColor(105,118,135);
+    doc.text(isAr?`معهد برودل للغات | صفحة ${n} من ${pages}`:`Prudle Language Institute | Page ${n} of ${pages}`,
+             w/2,h-5,{align:"center"});
+  }
+}
+
 /* ================= PDF CHARTS - SAME CONTENT IN BOTH LANGUAGES ================= */
 function addAllSkillChartsPage(doc, language){
   const isAr = language==="ar";
@@ -1988,16 +2032,14 @@ async function exportPDFReportArabic(){
     ],
     body:[
       ["الاسم",STUDENT.name || "-"],
-      ["رقم الهوية / الإقامة",STUDENT.iqama || "-"],
+      ["الهوية / الإقامة",studentIdentityValue(STUDENT)],
       [
         "الدورة",
-        COURSE.TrainingCourse ||
-        COURSE.CourseName ||
-        "-"
+        courseDisplayName(COURSE)
       ],
-      ["المدرب",COURSE.Trainer || "-"],
-      ["الفترة",COURSE.Period || "-"],
-      ["تاريخ البدء",COURSE.StartingDate || "-"]
+      ["المدرب",trainerDisplayName(COURSE)],
+      ["الفترة",periodDisplayValue(COURSE)],
+      ["تاريخ البدء",startDateDisplayValue(COURSE)]
     ],
     headStyles:{
       font:"PrudleArabic",
@@ -3070,19 +3112,22 @@ async function exportPDFReportEnglish(){
     head:[["Student Information","Details"]],
     body:[
       ["Name",STUDENT.name||"-"],
-      ["ID / Iqama",STUDENT.iqama||"-"],
-      ["Course",COURSE.TrainingCourse||COURSE.CourseName||"-"],
-      ["Trainer",COURSE.Trainer||"-"],
-      ["Period",COURSE.Period||"-"],
-      ["Start Date",COURSE.StartingDate||"-"]
+      ["ID / Iqama",studentIdentityValue(STUDENT)],
+      ["Course",courseDisplayName(COURSE)],
+      ["Trainer",trainerDisplayName(COURSE)],
+      ["Period",periodDisplayValue(COURSE)],
+      ["Start Date",startDateDisplayValue(COURSE)]
     ],
     headStyles:{fillColor:BLUE,textColor:255,fontStyle:"bold"},
     styles:{font:"helvetica",fontSize:9,cellPadding:3},
     columnStyles:{0:{fontStyle:"bold",fillColor:LIGHT,cellWidth:48}}
   });
 
+  let sectionY=doc.lastAutoTable.finalY+7;
+  doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...BLUE);
+  doc.text("Attendance Summary",12,sectionY);
   doc.autoTable({
-    startY:doc.lastAutoTable.finalY+5,theme:"grid",
+    startY:sectionY+3,theme:"grid",
     head:[["Attendance","Value"]],
     body:[
       ["Present Days",String(present)],
@@ -3102,9 +3147,12 @@ async function exportPDFReportEnglish(){
     const status=total>=90?"Excellent":total>=80?"Very Good":total>=70?"Good":total>=65?"Pass":"Failed";
     grades.push(["Final Status",status]);
   }
+  sectionY=doc.lastAutoTable.finalY+7;
+  doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...BLUE);
+  doc.text("Course Grades",12,sectionY);
   doc.autoTable({
-    startY:doc.lastAutoTable.finalY+5,theme:"grid",
-    head:[["Course Grades","Value"]],body:grades,
+    startY:sectionY+3,theme:"grid",
+    head:[["Assessment","Value"]],body:grades,
     headStyles:{fillColor:BLUE,textColor:255},
     styles:{font:"helvetica",fontSize:9,cellPadding:3}
   });
@@ -3114,7 +3162,7 @@ async function exportPDFReportEnglish(){
   doc.setTextColor(255); doc.setFont("helvetica","bold"); doc.setFontSize(16);
   doc.text("Academic Performance Details",105,12,{align:"center"});
   doc.setFontSize(9);
-  doc.text(`${COURSE.TrainingCourse||COURSE.CourseName||"Course"} - ${STUDENT.name||"Student"}`,105,19,{align:"center"});
+  doc.text(`${courseDisplayName(COURSE)} - ${STUDENT.name||"Student"}`,105,19,{align:"center"});
   doc.setTextColor(0);
 
   let y=36;
@@ -3185,6 +3233,10 @@ async function exportPDFReportEnglish(){
   }
 
   const safeName=String(STUDENT.name||"Student").replace(/[\\/:*?"<>|]/g,"-");
+  addProfessionalPdfBranding(doc,"ar");
+
+  addProfessionalPdfBranding(doc,"en");
+
   doc.save(`Prudle_Report_EN_${safeName}.pdf`);
 }
 

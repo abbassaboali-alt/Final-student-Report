@@ -500,6 +500,7 @@ async function setReportLanguage(lang){
   if(CURRENT_INDEX>=0){
     renderAttendance(COURSES[CURRENT_INDEX].student);
     renderGrades(COURSES[CURRENT_INDEX].student);
+    renderPlanLive(COURSES[CURRENT_INDEX].course);
     renderStudentSkillAnalytics();
   }
 }
@@ -520,6 +521,20 @@ const SKILL_NAMES = [
   "Grammar",
   "Vocabulary"
 ];
+
+function localizedSkillName(skill){
+  if(REPORT_LANGUAGE!=="ar") return skill;
+  const map={
+    Listening:"الاستماع",
+    Speaking:"التحدث",
+    Reading:"القراءة",
+    Writing:"الكتابة",
+    Grammar:"القواعد",
+    Vocabulary:"المفردات"
+  };
+  return map[skill] || skill;
+}
+
 
 let SKILL_SCORES = {};
 let ACTIVITY_HISTORY = [];
@@ -1423,9 +1438,9 @@ function renderSkillBarChart(){
   SKILL_BAR_CHART = new Chart(ctx,{
     type:"bar",
     data:{
-      labels:SKILL_NAMES,
+      labels:SKILL_NAMES.map(localizedSkillName),
       datasets:[{
-        label:"الدرجة",
+        label:REPORT_LANGUAGE==="ar"?"الدرجة":"Score",
         data:values,
         backgroundColor:[
           "#1abc9c",
@@ -1471,9 +1486,9 @@ function renderSkillRadarChart(){
   SUMMARY_CHART = new Chart(ctx,{
     type:"radar",
     data:{
-      labels:SKILL_NAMES,
+      labels:SKILL_NAMES.map(localizedSkillName),
       datasets:[{
-        label:"Skills",
+        label:REPORT_LANGUAGE==="ar"?"المهارات":"Skills",
         data:values,
         backgroundColor:"rgba(22,68,120,0.18)",
         borderColor:"#164478",
@@ -1517,7 +1532,7 @@ function renderWeakStrongSkillChart(){
   WEAK_STRONG_CHART = new Chart(ctx,{
     type:"doughnut",
     data:{
-      labels:["Weak Skills","Strong Skills"],
+      labels:REPORT_LANGUAGE==="ar"?["مهارات تحتاج تحسين","مهارات قوية"]:["Needs Improvement","Strong Skills"],
       datasets:[{
         data:[weak,strong],
         backgroundColor:["#e74c3c","#1abc9c"]
@@ -1570,7 +1585,9 @@ function getPlanColorClass(text){
 }
 /* ================= STUDY PLAN LIVE (StudyPlans) ================= */
 function renderPlanLive(COURSE){
-  const days=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس"];
+  const days=REPORT_LANGUAGE==="ar"
+    ? ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس"]
+    : ["Sunday","Monday","Tuesday","Wednesday","Thursday"];
   const duration = Number(COURSE.Duration)||Number(COURSE.Weeks)||8;
 
   const start = COURSE.StartingDate ? new Date(COURSE.StartingDate) : null;
@@ -1578,7 +1595,7 @@ function renderPlanLive(COURSE){
   const currentWeek = start ? Math.floor((now-start)/(1000*60*60*24*7))+1 : -1;
 
   if(!duration){
-    weeklyPlan.innerHTML = '<p class="hint">مدة الدورة غير موجودة (Duration)</p>';
+    weeklyPlan.innerHTML = `<p class="hint">${REPORT_LANGUAGE==="ar"?"مدة الدورة غير موجودة (Duration)":"Course duration is not available"}</p>`;
     return;
   }
 
@@ -1593,13 +1610,13 @@ function renderPlanLive(COURSE){
         map[`${p.week}_${p.day}`]=p.activity||"";
       });
 
-      let html="<table><tr><th>الأسبوع</th>";
+      let html=`<table><tr><th>${REPORT_LANGUAGE==="ar"?"الأسبوع":"Week"}</th>`;
       days.forEach(d=>html+=`<th>${d}</th>`);
       html+="</tr>";
 
       for(let w=1; w<=duration; w++){
         html += `<tr class="${w===currentWeek?'current-week':''}">
-          <td>الأسبوع ${w}</td>`;
+          <td>${REPORT_LANGUAGE==="ar"?"الأسبوع":"Week"} ${w}</td>`;
         days.forEach(d=>{
          const activity = map[`${w}_${d}`] || "";
 const cls = getPlanColorClass(activity);
@@ -1616,8 +1633,84 @@ html += `
       weeklyPlan.innerHTML = html + "</table>";
     }, err=>{
       console.error(err);
-      weeklyPlan.innerHTML = '<p class="hint">تعذر تحميل الخطة. تحقق من صلاحيات Firestore.</p>';
+      weeklyPlan.innerHTML = `<p class="hint">${REPORT_LANGUAGE==="ar"?"تعذر تحميل الخطة. تحقق من صلاحيات Firestore.":"Unable to load the study plan. Check Firestore permissions."}</p>`;
     });
+}
+
+
+/* ================= PDF CHARTS - SAME CONTENT IN BOTH LANGUAGES ================= */
+function addAllSkillChartsPage(doc, language){
+  const isAr = language==="ar";
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const BLUE=[22,68,120];
+
+  const chartItems=[
+    {
+      chart:SKILL_BAR_CHART,
+      title:isAr ? "درجات المهارات" : "Skill Scores"
+    },
+    {
+      chart:SUMMARY_CHART,
+      title:isAr ? "مقارنة المهارات" : "Skills Comparison"
+    },
+    {
+      chart:WEAK_STRONG_CHART,
+      title:isAr ? "المهارات الضعيفة / القوية" : "Needs Improvement / Strong Skills"
+    }
+  ].filter(item=>item.chart);
+
+  if(!chartItems.length) return;
+
+  doc.addPage();
+  doc.setFillColor(...BLUE);
+  doc.rect(0,0,pageWidth,27,"F");
+  doc.setTextColor(255);
+  doc.setFont(isAr ? "PrudleArabic" : "helvetica","bold");
+  doc.setFontSize(16);
+  doc.text(
+    isAr ? "التحليل البياني للمهارات" : "Skills Visual Analysis",
+    pageWidth/2,12,{align:"center"}
+  );
+  doc.setFontSize(9);
+  doc.text(
+    isAr ? "عرض موحد لجميع الرسوم البيانية" : "Complete visual summary of skill performance",
+    pageWidth/2,19,{align:"center"}
+  );
+
+  let y=34;
+  const boxH=76;
+
+  chartItems.forEach((item,index)=>{
+    if(y+boxH>pageHeight-14){
+      doc.addPage();
+      y=18;
+    }
+
+    doc.setFillColor(250,252,254);
+    doc.setDrawColor(218,227,238);
+    doc.roundedRect(12,y,pageWidth-24,boxH,3,3,"FD");
+
+    doc.setTextColor(...BLUE);
+    doc.setFont(isAr ? "PrudleArabic" : "helvetica","bold");
+    doc.setFontSize(10);
+    doc.text(item.title,pageWidth/2,y+7,{align:"center"});
+
+    try{
+      const img=item.chart.toBase64Image();
+      doc.addImage(img,"PNG",24,y+11,pageWidth-48,58);
+    }catch(error){
+      console.warn("Unable to add PDF chart:",error);
+      doc.setTextColor(120);
+      doc.setFontSize(8);
+      doc.text(
+        isAr ? "تعذر إضافة الرسم البياني" : "Unable to add chart",
+        pageWidth/2,y+38,{align:"center"}
+      );
+    }
+
+    y+=boxH+6;
+  });
 }
 
 /* ================= PDF ARABIC TRANSLATION ================= */
@@ -2893,74 +2986,8 @@ async function exportPDFReportArabic(){
   }
 
 
-  /*
-    الرسم البياني الكبير يبقى اختياريًا ومصغرًا.
-    إذا لم توجد مساحة كافية، لا يتم إضافته لأن
-    كل مهارة أصبحت تحتوي بالفعل على رسم مصغر.
-  */
-  if(
-    SKILL_BAR_CHART &&
-    y <= pageHeight-63
-  ){
-
-    try{
-
-      const img =
-        SKILL_BAR_CHART.toBase64Image();
-
-      doc.setFillColor(
-        250,
-        252,
-        254
-      );
-
-      doc.setDrawColor(
-        221,
-        231,
-        240
-      );
-
-      doc.roundedRect(
-        12,
-        y,
-        pageWidth-24,
-        48,
-        3,
-        3,
-        "FD"
-      );
-
-      doc.setFontSize(8.5);
-      doc.setTextColor(...BLUE);
-      doc.setFont(
-        "PrudleArabic",
-        "bold"
-      );
-
-      doc.text(
-        "نظرة عامة على المهارات",
-        pageWidth/2,
-        y+6,
-        {align:"center"}
-      );
-
-      doc.addImage(
-        img,
-        "PNG",
-        25,
-        y+8,
-        pageWidth-50,
-        35
-      );
-
-    }catch(error){
-
-      console.warn(
-        "Unable to add skills chart:",
-        error
-      );
-    }
-  }
+  /* Unified chart page for Arabic and English PDFs. */
+  addAllSkillChartsPage(doc,"ar");
 
 
   /*
@@ -3124,7 +3151,7 @@ async function exportPDFReportEnglish(){
     y+=8;
   }
 
-  if(y>225){doc.addPage();y=25;}
+  if(y>205){doc.addPage();y=25;}
   doc.setFont("helvetica","bold"); doc.setTextColor(...BLUE); doc.setFontSize(11);
   doc.text("Skills Evaluation",12,y); y+=4;
 
@@ -3147,6 +3174,8 @@ async function exportPDFReportEnglish(){
     doc.setFont("helvetica","bold"); doc.setTextColor(...BLUE); doc.setFontSize(10);
     doc.text(`Final Skills Evaluation Average: ${avg} / 10 (${Math.round(avg*10)}%)`,12,y);
   }
+
+  addAllSkillChartsPage(doc,"en");
 
   const pages=doc.getNumberOfPages();
   for(let n=1;n<=pages;n++){

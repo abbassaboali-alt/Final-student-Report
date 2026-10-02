@@ -159,6 +159,14 @@ button.action{
   display:flex;gap:10px;flex-wrap:wrap;
   justify-content:flex-end;margin-top:10px
 }
+.language-switch{
+  display:flex;align-items:center;gap:8px;
+  background:#eef3f9;padding:7px 10px;border-radius:12px;
+  font-weight:900;color:#164478
+}
+.language-switch select{
+  width:auto;min-width:125px;margin:0;padding:8px 10px;
+}
 .topActions .miniBtn{
   padding:10px 14px;border-radius:12px;border:none;cursor:pointer;
   font-weight:900;font-family:Tajawal;
@@ -202,26 +210,33 @@ button.action{
 <body>
 <div class="page">
 
-<header>
+<header id="mainHeader">
   <img id="hdrLogo"
        src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRJprpZXU4pTSCYXKhzWCpqdZ_mnPHMwqsACA&s"
        style="width:110px;height:110px"><br>
-  برودل – التقرير الأكاديمي الشامل
+  <span id="headerTitle">برودل – التقرير الأكاديمي الشامل</span>
 </header>
 
 <div class="box login-box" id="loginBox">
-  <h3>دخول الطالب/ة</h3>
+  <h3 id="loginTitle">دخول الطالب/ة</h3>
 
   <input id="identity" placeholder="رقم الهوية / الإقامة" />
   <input id="last4" placeholder="آخر 4 أرقام من الهوية" inputmode="numeric" />
 
-  <button onclick="login()">عرض التقرير</button>
+  <button id="loginBtn" onclick="login()">عرض التقرير</button>
   <p id="msg" style="color:#c0392b;font-weight:900"></p>
 </div>
 
 <div class="box" id="content" style="display:none">
   <div class="topActions">
-    <button class="miniBtn red" onclick="logoutStudent()">تسجيل خروج</button>
+    <div class="language-switch">
+      <span id="languageLabel">اللغة</span>
+      <select id="languageSelector" onchange="setReportLanguage(this.value)">
+        <option value="ar">العربية</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+    <button class="miniBtn red" id="logoutBtn" onclick="logoutStudent()">تسجيل خروج</button>
   </div>
 
   <h2 id="studentName" style="margin:0 0 10px 0"></h2>
@@ -245,13 +260,13 @@ button.action{
     </div>
 
     <!-- Study Plan -->
-    <h3 style="margin:16px 0 0 0">الخطة الدراسية</h3>
+    <h3 id="studyPlanTitle" style="margin:16px 0 0 0">الخطة الدراسية</h3>
     <div class="table-wrap">
       <div id="weeklyPlan"><p class="hint">—</p></div>
     </div>
 
     <!-- Grades -->
-    <h3 style="margin:16px 0 0 0">الدرجات</h3>
+    <h3 id="gradesTitle" style="margin:16px 0 0 0">الدرجات</h3>
     <div class="table-wrap">
       <table>
         <tbody>
@@ -280,7 +295,7 @@ button.action{
     </div>
 
     <!-- Skills -->
-<h3 style="margin:16px 0 0 0">تقييم المهارات</h3>
+<h3 id="skillsTitle" style="margin:16px 0 0 0">تقييم المهارات</h3>
 
 <div class="chartGrid">
 
@@ -308,13 +323,13 @@ button.action{
 </div>
 
     <!-- Trainer Comment -->
-    <h3 style="margin:16px 0 0 0">تعليق المدرب</h3>
+    <h3 id="trainerCommentTitle" style="margin:16px 0 0 0">تعليق المدرب</h3>
     <div id="trainerComment" class="commentBox">—</div>
 
     <!-- Buttons -->
     <div class="twoBtns">
-      <button class="action" onclick="exportPDFReport()">□ تحميل التقرير PDF</button>
-      <button class="action" onclick="goToMNAR()">□ الانتقال إلى منصة منار</button>
+      <button class="action" id="pdfReportBtn" onclick="exportPDFReport()">□ تحميل التقرير PDF</button>
+      <button class="action" id="mnarBtn" onclick="goToMNAR()">□ الانتقال إلى منصة منار</button>
     </div>
 
   </div>
@@ -334,6 +349,161 @@ if(!firebase.apps.length){
 const db=firebase.firestore();
 
 /* ================= GLOBAL ================= */
+let REPORT_LANGUAGE = localStorage.getItem("prudleReportLanguage") || "ar";
+const UI_TEXT = {
+  ar:{
+    header:"برودل – التقرير الأكاديمي الشامل",
+    language:"اللغة", logout:"تسجيل خروج",
+    loginTitle:"دخول الطالب/ة", identity:"رقم الهوية / الإقامة",
+    last4:"آخر 4 أرقام من الهوية", login:"عرض التقرير",
+    chooseCourse:"— اختر الدورة لعرض البيانات —",
+    chooseHint:"⬅️ الرجاء اختيار دورة",
+    lastAttendance:"آخر حضور", presentDays:"أيام الحضور",
+    absentDays:"أيام الغياب", attendanceScore:"درجة الحضور",
+    plan:"الخطة الدراسية", grades:"الدرجات",
+    mid:"منتصف", final:"نهائي", homework:"واجبات", attendance:"الحضور",
+    speaking:"تحدث", listening:"استماع", total:"الإجمالي", grade:"التقدير",
+    skills:"تقييم المهارات", skillScores:"درجات المهارات",
+    skillsComparison:"مقارنة المهارات", weakStrong:"المهارات الضعيفة / القوية",
+    trainerComment:"تعليق المدرب", pdf:"تحميل التقرير PDF",
+    mnar:"الانتقال إلى منصة منار",
+    course:"الدورة", trainer:"المدرب", period:"الفترة", start:"تاريخ البدء",
+    notFound:"الطالب غير موجود", enterId:"أدخل رقم الهوية",
+    enterLast4:"أدخل آخر 4 أرقام", wrongLast4:"آخر 4 أرقام غير صحيحة",
+    loadError:T("loadError"),
+    present:"حاضر", absent:"غائب"
+  },
+  en:{
+    header:"Prudle – Comprehensive Academic Report",
+    language:"Language", logout:"Logout",
+    loginTitle:"Student Login", identity:"ID / Iqama Number",
+    last4:"Last 4 digits of ID", login:"View Report",
+    chooseCourse:"— Select a course to view data —",
+    chooseHint:"Please select a course",
+    lastAttendance:"Last Attendance", presentDays:"Present Days",
+    absentDays:"Absent Days", attendanceScore:"Attendance Score",
+    plan:"Study Plan", grades:"Grades",
+    mid:"Midterm", final:"Final", homework:"Homework", attendance:"Attendance",
+    speaking:"Speaking", listening:"Listening", total:"Total", grade:"Grade",
+    skills:"Skills Evaluation", skillScores:"Skill Scores",
+    skillsComparison:"Skills Comparison", weakStrong:"Weak / Strong Skills",
+    trainerComment:"Trainer Comment", pdf:"Download PDF Report",
+    mnar:"Go to Mnar Platform",
+    course:"Course", trainer:"Trainer", period:"Period", start:"Start Date",
+    notFound:"Student not found", enterId:"Enter ID / Iqama number",
+    enterLast4:"Enter the last 4 digits", wrongLast4:"The last 4 digits are incorrect",
+    loadError:"Unable to load student data. Please try again.",
+    present:"Present", absent:"Absent"
+  }
+};
+const T = key => UI_TEXT[REPORT_LANGUAGE]?.[key] || UI_TEXT.ar[key] || key;
+
+const PAGE_TRANSLATION_CACHE = new Map();
+async function translateTextForLanguage(text, targetLang=REPORT_LANGUAGE){
+  const original=String(text||"").trim();
+  if(!original || original==="—") return original;
+  const hasArabic=/[\u0600-\u06FF]/.test(original);
+  const hasEnglish=/[A-Za-z]/.test(original);
+  if(targetLang==="ar" && hasArabic && !hasEnglish) return original;
+  if(targetLang==="en" && hasEnglish && !hasArabic) return original;
+  const cacheKey=targetLang+"|"+original;
+  if(PAGE_TRANSLATION_CACHE.has(cacheKey)) return PAGE_TRANSLATION_CACHE.get(cacheKey);
+  try{
+    const url="https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl="+
+      encodeURIComponent(targetLang)+"&dt=t&q="+encodeURIComponent(original);
+    const response=await fetch(url);
+    if(!response.ok) throw new Error("Translation failed");
+    const data=await response.json();
+    const translated=Array.isArray(data?.[0])
+      ? data[0].map(part=>part?.[0]||"").join("").trim()
+      : original;
+    PAGE_TRANSLATION_CACHE.set(cacheKey,translated||original);
+    return translated||original;
+  }catch(error){
+    console.warn("Translation fallback:",error);
+    return original;
+  }
+}
+
+function setTextIf(id,text){
+  const el=document.getElementById(id);
+  if(el) el.textContent=text;
+}
+
+async function applyReportLanguage(){
+  document.documentElement.lang=REPORT_LANGUAGE;
+  document.documentElement.dir=REPORT_LANGUAGE==="ar"?"rtl":"ltr";
+  document.body.style.direction=REPORT_LANGUAGE==="ar"?"rtl":"ltr";
+  if(languageSelector) languageSelector.value=REPORT_LANGUAGE;
+
+  setTextIf("headerTitle",T("header"));
+  setTextIf("languageLabel",T("language"));
+  setTextIf("logoutBtn",T("logout"));
+  setTextIf("loginTitle",T("loginTitle"));
+  identity.placeholder=T("identity");
+  last4.placeholder=T("last4");
+  setTextIf("loginBtn",T("login"));
+  setTextIf("hint",T("chooseHint"));
+  setTextIf("studyPlanTitle",T("plan"));
+  setTextIf("gradesTitle",T("grades"));
+  setTextIf("skillsTitle",T("skills"));
+  setTextIf("trainerCommentTitle",T("trainerComment"));
+  setTextIf("pdfReportBtn",T("pdf"));
+  setTextIf("mnarBtn",T("mnar"));
+
+  const stats=document.querySelectorAll(".statRow .stat");
+  const statKeys=["lastAttendance","presentDays","absentDays","attendanceScore"];
+  stats.forEach((el,index)=>{
+    const span=el.querySelector("span");
+    if(span && statKeys[index]){
+      const value=span.outerHTML;
+      el.innerHTML=T(statKeys[index])+"<br>"+value;
+    }
+  });
+
+  const gradeHeaders=document.querySelectorAll("#gradesTitle + .table-wrap th");
+  const gradeKeys=["mid","final","homework","attendance","speaking","listening","total","grade"];
+  gradeHeaders.forEach((el,index)=>{ if(gradeKeys[index]) el.textContent=T(gradeKeys[index]); });
+
+  const chartTitles=document.querySelectorAll(".chartTitle");
+  const chartKeys=["skillScores","skillsComparison","weakStrong"];
+  chartTitles.forEach((el,index)=>{if(chartKeys[index]) el.textContent=T(chartKeys[index]);});
+
+  const firstOption=courseSelector?.querySelector('option[value=""]');
+  if(firstOption) firstOption.textContent=T("chooseCourse");
+
+  if(CURRENT_INDEX>=0 && COURSES[CURRENT_INDEX]){
+    await refreshLocalizedCourseText();
+  }
+}
+
+async function refreshLocalizedCourseText(){
+  const data=COURSES[CURRENT_INDEX];
+  if(!data) return;
+  const STUDENT=data.student, COURSE=data.course;
+  courseInfo.textContent =
+    `${T("course")}: ${COURSE.TrainingCourse||COURSE.CourseName||"-"} | `+
+    `${T("trainer")}: ${COURSE.Trainer||"-"} | `+
+    `${T("period")}: ${COURSE.Period||"-"} | `+
+    `${T("start")}: ${COURSE.StartingDate||"-"}`;
+
+  const originalComment=STUDENT.trainerComment || "—";
+  trainerComment.textContent =
+    originalComment==="—" ? "—" : await translateTextForLanguage(originalComment,REPORT_LANGUAGE);
+}
+
+async function setReportLanguage(lang){
+  REPORT_LANGUAGE = lang==="en" ? "en" : "ar";
+  localStorage.setItem("prudleReportLanguage",REPORT_LANGUAGE);
+  await applyReportLanguage();
+  if(CURRENT_INDEX>=0){
+    renderAttendance(COURSES[CURRENT_INDEX].student);
+    renderGrades(COURSES[CURRENT_INDEX].student);
+    renderStudentSkillAnalytics();
+  }
+}
+
+
 let COURSES=[];           // [{student, course}]
 let CURRENT_INDEX=-1;
 
@@ -403,7 +573,9 @@ window.addEventListener("pageshow", function(){
 
 });
 
-window.addEventListener("load", function(){
+window.addEventListener("load", async function(){
+
+  await applyReportLanguage();
 
   if(!hasValidStudentLogin()){
     return;
@@ -452,17 +624,17 @@ async function login(){
     const l4=last4.value.trim();
 
     if(!iq){
-      msg.textContent="أدخل رقم الهوية";
+      msg.textContent=T("enterId");
       return;
     }
 
     if(!l4 || l4.length!==4){
-      msg.textContent="أدخل آخر 4 أرقام";
+      msg.textContent=T("enterLast4");
       return;
     }
 
     if(!iq.endsWith(l4)){
-      msg.textContent="آخر 4 أرقام غير صحيحة";
+      msg.textContent=T("wrongLast4");
       return;
     }
 
@@ -478,7 +650,7 @@ async function login(){
         .get();
 
     if(q.empty){
-      msg.textContent="الطالب غير موجود";
+      msg.textContent=T("notFound");
       return;
     }
 
@@ -564,7 +736,7 @@ async function login(){
       لمنع أي التباس أو تكرار عند إعادة الترتيب.
     */
     courseSelector.innerHTML =
-      '<option value="">— اختر الدورة لعرض البيانات —</option>';
+      `<option value="">${T("chooseCourse")}</option>`;
 
     const renderedCourseIds =
       new Set();
@@ -681,7 +853,7 @@ async function login(){
     );
 
     msg.textContent =
-      "تعذر تحميل بيانات الطالب. حاول مرة أخرى.";
+      T("loadError");
 
   }finally{
 
@@ -703,11 +875,7 @@ async function loadCourse(loadToken = COURSE_LOAD_TOKEN){
   const STUDENT=data.student;
   const COURSE=data.course;
 
-  courseInfo.textContent =
-    `الدورة: ${COURSE.TrainingCourse||COURSE.CourseName||"-"} | المدرب: ${COURSE.Trainer||"-"} | الفترة: ${COURSE.Period||"-"} | تاريخ البدء: ${COURSE.StartingDate||"-"}`;
-
-  trainerComment.textContent =
-    STUDENT.trainerComment || "—";
+  await refreshLocalizedCourseText();
 
   renderAttendance(STUDENT);
 
@@ -747,7 +915,7 @@ function renderAttendance(STUDENT){
     .filter(x=>x && x.date)
     .sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
 
-  lastAttendance.textContent = last ? `${last.date} (${last.status})` : "—";
+  lastAttendance.textContent = last ? `${last.date} (${last.status==="present"?T("present"):last.status==="absent"?T("absent"):last.status})` : "—";
 
   const att = calcAttendanceScore(STUDENT);
   attScore.textContent = att==null ? "—" : `${att} / 10`;
@@ -807,11 +975,12 @@ function renderGrades(STUDENT){
 }
 
 function gradeLabel(total){
-  if(total>=90) return {cls:"badge-green", lbl:"Excellent"};
-  if(total>=80) return {cls:"badge-green", lbl:"Very Good"};
-  if(total>=70) return {cls:"badge-yellow",lbl:"Good"};
-  if(total>=65) return {cls:"badge-orange",lbl:"Pass"};
-  return {cls:"badge-red",lbl:"Failed"};
+  const ar=REPORT_LANGUAGE==="ar";
+  if(total>=90) return {cls:"badge-green", lbl:ar?"ممتاز":"Excellent"};
+  if(total>=80) return {cls:"badge-green", lbl:ar?"جيد جداً":"Very Good"};
+  if(total>=70) return {cls:"badge-yellow",lbl:ar?"جيد":"Good"};
+  if(total>=65) return {cls:"badge-orange",lbl:ar?"ناجح":"Pass"};
+  return {cls:"badge-red",lbl:ar?"راسب":"Failed"};
 }
 
 /* ================= SKILLS (EnglishActivities) ================= */
@@ -1510,7 +1679,7 @@ function pdfArabicGradeLabel(value){
 }
 
 /* ================= PDF REPORT (ARABIC, FULL) ================= */
-async function exportPDFReport(){
+async async function exportPDFReportArabic(){
 
   if(CURRENT_INDEX<0){
     alert("اختر دورة أولاً");
@@ -2821,6 +2990,172 @@ async function exportPDFReport(){
   doc.save(
     `Prudle_Report_${safeName}.pdf`
   );
+}
+
+
+async function exportPDFReport(){
+  if(REPORT_LANGUAGE==="ar"){
+    return exportPDFReportArabic();
+  }
+  return exportPDFReportEnglish();
+}
+
+async function exportPDFReportEnglish(){
+  if(CURRENT_INDEX<0){
+    alert("Select a course first");
+    return;
+  }
+
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF("p","mm","a4");
+  const data=COURSES[CURRENT_INDEX];
+  const STUDENT=data.student;
+  const COURSE=data.course;
+  const BLUE=[22,68,120], LIGHT=[239,245,251];
+
+  const records=Array.isArray(STUDENT.records)?STUDENT.records:[];
+  const present=records.filter(x=>x&&x.status==="present").length;
+  const absent=records.filter(x=>x&&x.status==="absent").length;
+  const att=calcAttendanceScore(STUDENT);
+
+  const midV=STUDENT.midterm, finV=STUDENT.finalExam, homeV=STUDENT.hwScore;
+  const speakV=STUDENT.speaking, listenV=STUDENT.listening;
+  const complete=[midV,finV,homeV,speakV,listenV,att].every(v=>v!=null);
+  const total=complete
+    ? Number(midV)+Number(finV)+Number(homeV)+Number(speakV)+Number(listenV)+Number(att)
+    : null;
+
+  doc.setFillColor(...BLUE);
+  doc.rect(0,0,210,29,"F");
+  doc.setTextColor(255);
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(17);
+  doc.text("PRUDLE - Student Academic Report",105,13,{align:"center"});
+  doc.setFontSize(9);
+  doc.text("Comprehensive Academic Summary",105,20,{align:"center"});
+  doc.setTextColor(0);
+
+  await tryAddImage(doc,PDF_LOGO_URL,12,5,20,20);
+
+  doc.autoTable({
+    startY:36,theme:"grid",
+    head:[["Student Information","Details"]],
+    body:[
+      ["Name",STUDENT.name||"-"],
+      ["ID / Iqama",STUDENT.iqama||"-"],
+      ["Course",COURSE.TrainingCourse||COURSE.CourseName||"-"],
+      ["Trainer",COURSE.Trainer||"-"],
+      ["Period",COURSE.Period||"-"],
+      ["Start Date",COURSE.StartingDate||"-"]
+    ],
+    headStyles:{fillColor:BLUE,textColor:255,fontStyle:"bold"},
+    styles:{font:"helvetica",fontSize:9,cellPadding:3},
+    columnStyles:{0:{fontStyle:"bold",fillColor:LIGHT,cellWidth:48}}
+  });
+
+  doc.autoTable({
+    startY:doc.lastAutoTable.finalY+5,theme:"grid",
+    head:[["Attendance","Value"]],
+    body:[
+      ["Present Days",String(present)],
+      ["Absent Days",String(absent)],
+      ["Attendance Score",att==null?"-":`${att} / 10`]
+    ],
+    headStyles:{fillColor:BLUE,textColor:255},
+    styles:{font:"helvetica",fontSize:9,cellPadding:3}
+  });
+
+  const grades=[
+    ["Midterm",midV??"-"],["Final Exam",finV??"-"],["Homework",homeV??"-"],
+    ["Attendance",att??"-"],["Listening",listenV??"-"],["Speaking",speakV??"-"]
+  ];
+  if(total!=null){
+    grades.push(["TOTAL",`${total} / 100`]);
+    const status=total>=90?"Excellent":total>=80?"Very Good":total>=70?"Good":total>=65?"Pass":"Failed";
+    grades.push(["Final Status",status]);
+  }
+  doc.autoTable({
+    startY:doc.lastAutoTable.finalY+5,theme:"grid",
+    head:[["Course Grades","Value"]],body:grades,
+    headStyles:{fillColor:BLUE,textColor:255},
+    styles:{font:"helvetica",fontSize:9,cellPadding:3}
+  });
+
+  doc.addPage();
+  doc.setFillColor(...BLUE); doc.rect(0,0,210,27,"F");
+  doc.setTextColor(255); doc.setFont("helvetica","bold"); doc.setFontSize(16);
+  doc.text("Academic Performance Details",105,12,{align:"center"});
+  doc.setFontSize(9);
+  doc.text(`${COURSE.TrainingCourse||COURSE.CourseName||"Course"} - ${STUDENT.name||"Student"}`,105,19,{align:"center"});
+  doc.setTextColor(0);
+
+  let y=36;
+  doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...BLUE);
+  doc.text("Trainer Feedback and Academic Guidance",12,y);
+  y+=6;
+  doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(25,45,65);
+  const englishComment=await translateTextForLanguage(STUDENT.trainerComment||"No trainer comment has been added yet.","en");
+  const commentLines=doc.splitTextToSize(englishComment,184);
+  doc.text(commentLines,12,y);
+  y+=Math.max(18,commentLines.length*5+5);
+
+  doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...BLUE);
+  doc.text("Solved Activity Grades",12,y); y+=4;
+  const activityRows=ACTIVITY_HISTORY.length
+    ? ACTIVITY_HISTORY.map((item,index)=>[
+        String(index+1),item.title||"Activity",
+        item.total>0?`${item.score} / ${item.total}`:String(item.score),
+        `${item.percent}%`,item.date||"-"
+      ])
+    : [["-","No solved activity results found","-","-","-"]];
+  doc.autoTable({
+    startY:y,theme:"grid",
+    head:[["#","Activity / Quiz","Correct / Total","Grade","Date"]],
+    body:activityRows,
+    headStyles:{fillColor:BLUE,textColor:255,fontStyle:"bold"},
+    styles:{font:"helvetica",fontSize:8,cellPadding:2.5}
+  });
+  y=doc.lastAutoTable.finalY+7;
+
+  if(ACTIVITY_FINAL_AVERAGE!==null){
+    doc.setFont("helvetica","bold"); doc.setTextColor(...BLUE); doc.setFontSize(10);
+    doc.text(`Final Activities Average: ${Number(ACTIVITY_FINAL_AVERAGE)}%`,12,y);
+    y+=8;
+  }
+
+  if(y>225){doc.addPage();y=25;}
+  doc.setFont("helvetica","bold"); doc.setTextColor(...BLUE); doc.setFontSize(11);
+  doc.text("Skills Evaluation",12,y); y+=4;
+
+  const skillRows=SKILL_NAMES.map(skill=>{
+    const value=Number(SKILL_SCORES[skill]||0);
+    const level=value>=8?"Strong":value>=6?"Good":value>0?"Developing":"Not Assessed";
+    return [skill,`${value} / 10`,level];
+  });
+  doc.autoTable({
+    startY:y,theme:"grid",
+    head:[["Skill","Score","Performance"]],body:skillRows,
+    headStyles:{fillColor:BLUE,textColor:255,fontStyle:"bold"},
+    styles:{font:"helvetica",fontSize:8.5,cellPadding:3}
+  });
+
+  const assessed=SKILL_NAMES.map(skill=>Number(SKILL_SCORES[skill]||0)).filter(v=>Number.isFinite(v)&&v>0);
+  if(assessed.length){
+    const avg=Math.round((assessed.reduce((a,b)=>a+b,0)/assessed.length)*10)/10;
+    y=doc.lastAutoTable.finalY+8;
+    doc.setFont("helvetica","bold"); doc.setTextColor(...BLUE); doc.setFontSize(10);
+    doc.text(`Final Skills Evaluation Average: ${avg} / 10 (${Math.round(avg*10)}%)`,12,y);
+  }
+
+  const pages=doc.getNumberOfPages();
+  for(let n=1;n<=pages;n++){
+    doc.setPage(n);
+    doc.setFont("helvetica","normal"); doc.setFontSize(7); doc.setTextColor(110);
+    doc.text(`Prudle Language Institute | Page ${n} of ${pages}`,105,291,{align:"center"});
+  }
+
+  const safeName=String(STUDENT.name||"Student").replace(/[\\/:*?"<>|]/g,"-");
+  doc.save(`Prudle_Report_EN_${safeName}.pdf`);
 }
 
 /* ================= MNAR ================= */

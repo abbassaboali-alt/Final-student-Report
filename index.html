@@ -159,6 +159,14 @@ button.action{
   display:flex;gap:10px;flex-wrap:wrap;
   justify-content:flex-end;margin-top:10px
 }
+.language-switch{
+  display:flex;align-items:center;gap:8px;
+  background:#eef3f9;padding:7px 10px;border-radius:12px;
+  font-weight:900;color:#164478
+}
+.language-switch select{
+  width:auto;min-width:125px;margin:0;padding:8px 10px;
+}
 .topActions .miniBtn{
   padding:10px 14px;border-radius:12px;border:none;cursor:pointer;
   font-weight:900;font-family:Tajawal;
@@ -202,26 +210,33 @@ button.action{
 <body>
 <div class="page">
 
-<header>
+<header id="mainHeader">
   <img id="hdrLogo"
        src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRJprpZXU4pTSCYXKhzWCpqdZ_mnPHMwqsACA&s"
        style="width:110px;height:110px"><br>
-  برودل – التقرير الأكاديمي الشامل
+  <span id="headerTitle">برودل – التقرير الأكاديمي الشامل</span>
 </header>
 
 <div class="box login-box" id="loginBox">
-  <h3>دخول الطالب/ة</h3>
+  <h3 id="loginTitle">دخول الطالب/ة</h3>
 
-  <input id="identity" placeholder="رقم الهوية / الإقامة" />
+  <input id="identity" placeholder="الهوية / الإقامة" />
   <input id="last4" placeholder="آخر 4 أرقام من الهوية" inputmode="numeric" />
 
-  <button onclick="login()">عرض التقرير</button>
+  <button id="loginBtn" onclick="login()">عرض التقرير</button>
   <p id="msg" style="color:#c0392b;font-weight:900"></p>
 </div>
 
 <div class="box" id="content" style="display:none">
   <div class="topActions">
-    <button class="miniBtn red" onclick="logoutStudent()">تسجيل خروج</button>
+    <div class="language-switch">
+      <span id="languageLabel">اللغة</span>
+      <select id="languageSelector" onchange="setReportLanguage(this.value)">
+        <option value="ar">العربية</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+    <button class="miniBtn red" id="logoutBtn" onclick="logoutStudent()">تسجيل خروج</button>
   </div>
 
   <h2 id="studentName" style="margin:0 0 10px 0"></h2>
@@ -245,13 +260,13 @@ button.action{
     </div>
 
     <!-- Study Plan -->
-    <h3 style="margin:16px 0 0 0">الخطة الدراسية</h3>
+    <h3 id="studyPlanTitle" style="margin:16px 0 0 0">الخطة الدراسية</h3>
     <div class="table-wrap">
       <div id="weeklyPlan"><p class="hint">—</p></div>
     </div>
 
     <!-- Grades -->
-    <h3 style="margin:16px 0 0 0">الدرجات</h3>
+    <h3 id="gradesTitle" style="margin:16px 0 0 0">الدرجات</h3>
     <div class="table-wrap">
       <table>
         <tbody>
@@ -280,7 +295,7 @@ button.action{
     </div>
 
     <!-- Skills -->
-<h3 style="margin:16px 0 0 0">تقييم المهارات</h3>
+<h3 id="skillsTitle" style="margin:16px 0 0 0">تقييم المهارات</h3>
 
 <div class="chartGrid">
 
@@ -308,13 +323,13 @@ button.action{
 </div>
 
     <!-- Trainer Comment -->
-    <h3 style="margin:16px 0 0 0">تعليق المدرب</h3>
+    <h3 id="trainerCommentTitle" style="margin:16px 0 0 0">تعليق المدرب</h3>
     <div id="trainerComment" class="commentBox">—</div>
 
     <!-- Buttons -->
     <div class="twoBtns">
-      <button class="action" onclick="exportPDFReport()">□ تحميل التقرير PDF</button>
-      <button class="action" onclick="goToMNAR()">□ الانتقال إلى منصة منار</button>
+      <button class="action" id="pdfReportBtn" onclick="exportPDFReport()">□ تحميل التقرير PDF</button>
+      <button class="action" id="mnarBtn" onclick="goToMNAR()">□ الانتقال إلى منصة منار</button>
     </div>
 
   </div>
@@ -334,6 +349,167 @@ if(!firebase.apps.length){
 const db=firebase.firestore();
 
 /* ================= GLOBAL ================= */
+let REPORT_LANGUAGE = localStorage.getItem("prudleReportLanguage") || "ar";
+const UI_TEXT = {
+  ar:{
+    header:"برودل – التقرير الأكاديمي الشامل",
+    language:"اللغة", logout:"تسجيل خروج",
+    loginTitle:"دخول الطالب/ة", identity:"الهوية / الإقامة",
+    last4:"آخر 4 أرقام من الهوية", login:"عرض التقرير",
+    chooseCourse:"— اختر الدورة لعرض البيانات —",
+    chooseHint:"⬅️ الرجاء اختيار دورة",
+    lastAttendance:"آخر حضور", presentDays:"أيام الحضور",
+    absentDays:"أيام الغياب", attendanceScore:"درجة الحضور",
+    plan:"الخطة الدراسية", grades:"الدرجات",
+    mid:"منتصف", final:"نهائي", homework:"واجبات", attendance:"الحضور",
+    speaking:"تحدث", listening:"استماع", total:"الإجمالي", grade:"التقدير",
+    skills:"تقييم المهارات", skillScores:"درجات المهارات",
+    skillsComparison:"مقارنة المهارات", weakStrong:"المهارات الضعيفة / القوية",
+    trainerComment:"تعليق المدرب", pdf:"تحميل التقرير PDF",
+    mnar:"الانتقال إلى منصة منار",
+    course:"الدورة", trainer:"المدرب", period:"الفترة", start:"تاريخ البدء",
+    notFound:"الطالب غير موجود", enterId:"أدخل رقم الهوية",
+    enterLast4:"أدخل آخر 4 أرقام", wrongLast4:"آخر 4 أرقام غير صحيحة",
+    loadError:"تعذر تحميل بيانات الطالب. حاول مرة أخرى.",
+    present:"حاضر", absent:"غائب"
+  },
+  en:{
+    header:"Prudle – Comprehensive Academic Report",
+    language:"Language", logout:"Logout",
+    loginTitle:"Student Login", identity:"ID / Iqama Number",
+    last4:"Last 4 digits of ID", login:"View Report",
+    chooseCourse:"— Select a course to view data —",
+    chooseHint:"Please select a course",
+    lastAttendance:"Last Attendance", presentDays:"Present Days",
+    absentDays:"Absent Days", attendanceScore:"Attendance Score",
+    plan:"Study Plan", grades:"Grades",
+    mid:"Midterm", final:"Final", homework:"Homework", attendance:"Attendance",
+    speaking:"Speaking", listening:"Listening", total:"Total", grade:"Grade",
+    skills:"Skills Evaluation", skillScores:"Skill Scores",
+    skillsComparison:"Skills Comparison", weakStrong:"Weak / Strong Skills",
+    trainerComment:"Trainer Comment", pdf:"Download PDF Report",
+    mnar:"Go to Mnar Platform",
+    course:"Course", trainer:"Trainer", period:"Period", start:"Start Date",
+    notFound:"Student not found", enterId:"Enter ID / Iqama number",
+    enterLast4:"Enter the last 4 digits", wrongLast4:"The last 4 digits are incorrect",
+    loadError:"Unable to load student data. Please try again.",
+    present:"Present", absent:"Absent"
+  }
+};
+const T = key => UI_TEXT[REPORT_LANGUAGE]?.[key] || UI_TEXT.ar[key] || key;
+
+const PAGE_TRANSLATION_CACHE = new Map();
+async function translateTextForLanguage(text, targetLang=REPORT_LANGUAGE){
+  const original=String(text||"").trim();
+  if(!original || original==="—") return original;
+  const hasArabic=/[\u0600-\u06FF]/.test(original);
+  const hasEnglish=/[A-Za-z]/.test(original);
+  if(targetLang==="ar" && hasArabic && !hasEnglish) return original;
+  if(targetLang==="en" && hasEnglish && !hasArabic) return original;
+  const cacheKey=targetLang+"|"+original;
+  if(PAGE_TRANSLATION_CACHE.has(cacheKey)) return PAGE_TRANSLATION_CACHE.get(cacheKey);
+  try{
+    const url="https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl="+
+      encodeURIComponent(targetLang)+"&dt=t&q="+encodeURIComponent(original);
+    const response=await fetch(url);
+    if(!response.ok) throw new Error("Translation failed");
+    const data=await response.json();
+    const translated=Array.isArray(data?.[0])
+      ? data[0].map(part=>part?.[0]||"").join("").trim()
+      : original;
+    PAGE_TRANSLATION_CACHE.set(cacheKey,translated||original);
+    return translated||original;
+  }catch(error){
+    console.warn("Translation fallback:",error);
+    return original;
+  }
+}
+
+function setTextIf(id,text){
+  const el=document.getElementById(id);
+  if(el) el.textContent=text;
+}
+
+async function applyReportLanguage(){
+  document.documentElement.lang=REPORT_LANGUAGE;
+  document.documentElement.dir=REPORT_LANGUAGE==="ar"?"rtl":"ltr";
+  document.body.style.direction=REPORT_LANGUAGE==="ar"?"rtl":"ltr";
+  const languageSelectorEl=document.getElementById("languageSelector");
+  if(languageSelectorEl) languageSelectorEl.value=REPORT_LANGUAGE;
+
+  setTextIf("headerTitle",T("header"));
+  setTextIf("languageLabel",T("language"));
+  setTextIf("logoutBtn",T("logout"));
+  setTextIf("loginTitle",T("loginTitle"));
+  identity.placeholder=T("identity");
+  last4.placeholder=T("last4");
+  setTextIf("loginBtn",T("login"));
+  setTextIf("hint",T("chooseHint"));
+  setTextIf("studyPlanTitle",T("plan"));
+  setTextIf("gradesTitle",T("grades"));
+  setTextIf("skillsTitle",T("skills"));
+  setTextIf("trainerCommentTitle",T("trainerComment"));
+  setTextIf("pdfReportBtn",T("pdf"));
+  setTextIf("mnarBtn",T("mnar"));
+
+  const stats=document.querySelectorAll(".statRow .stat");
+  const statKeys=["lastAttendance","presentDays","absentDays","attendanceScore"];
+  stats.forEach((el,index)=>{
+    const span=el.querySelector("span");
+    if(span && statKeys[index]){
+      const value=span.outerHTML;
+      el.innerHTML=T(statKeys[index])+"<br>"+value;
+    }
+  });
+
+  const gradeHeaders=document.querySelectorAll("#gradesTitle + .table-wrap th");
+  const gradeKeys=["mid","final","homework","attendance","speaking","listening","total","grade"];
+  gradeHeaders.forEach((el,index)=>{ if(gradeKeys[index]) el.textContent=T(gradeKeys[index]); });
+
+  const chartTitles=document.querySelectorAll(".chartTitle");
+  const chartKeys=["skillScores","skillsComparison","weakStrong"];
+  chartTitles.forEach((el,index)=>{if(chartKeys[index]) el.textContent=T(chartKeys[index]);});
+
+  const firstOption=courseSelector?.querySelector('option[value=""]');
+  if(firstOption) firstOption.textContent=T("chooseCourse");
+
+  if(CURRENT_INDEX>=0 && COURSES[CURRENT_INDEX]){
+    await refreshLocalizedCourseText();
+    renderAttendance(COURSES[CURRENT_INDEX].student);
+    renderGrades(COURSES[CURRENT_INDEX].student);
+    renderPlanLive(COURSES[CURRENT_INDEX].course);
+    renderStudentSkillAnalytics();
+  }
+}
+
+async function refreshLocalizedCourseText(){
+  const data=COURSES[CURRENT_INDEX];
+  if(!data) return;
+  const STUDENT=data.student, COURSE=data.course;
+  courseInfo.textContent =
+    `${T("course")}: ${courseDisplayName(COURSE)} | `+
+    `${T("trainer")}: ${trainerDisplayName(COURSE)} | `+
+    `${T("period")}: ${periodDisplayValue(COURSE)} | `+
+    `${T("start")}: ${startDateDisplayValue(COURSE)}`;
+
+  const originalComment=STUDENT.trainerComment || "—";
+  trainerComment.textContent =
+    originalComment==="—" ? "—" : await translateTextForLanguage(originalComment,REPORT_LANGUAGE);
+}
+
+async function setReportLanguage(lang){
+  REPORT_LANGUAGE = lang==="en" ? "en" : "ar";
+  localStorage.setItem("prudleReportLanguage",REPORT_LANGUAGE);
+  await applyReportLanguage();
+  if(CURRENT_INDEX>=0){
+    renderAttendance(COURSES[CURRENT_INDEX].student);
+    renderGrades(COURSES[CURRENT_INDEX].student);
+    renderPlanLive(COURSES[CURRENT_INDEX].course);
+    renderStudentSkillAnalytics();
+  }
+}
+
+
 let COURSES=[];           // [{student, course}]
 let CURRENT_INDEX=-1;
 
@@ -349,6 +525,42 @@ const SKILL_NAMES = [
   "Grammar",
   "Vocabulary"
 ];
+
+function localizedSkillName(skill){
+  if(REPORT_LANGUAGE!=="ar") return skill;
+  const map={
+    Listening:"الاستماع",
+    Speaking:"التحدث",
+    Reading:"القراءة",
+    Writing:"الكتابة",
+    Grammar:"القواعد",
+    Vocabulary:"المفردات"
+  };
+  return map[skill] || skill;
+}
+
+function courseDisplayName(course){
+  return String(course?.TrainingCourse||course?.CourseName||course?.courseName||course?.Level||course?.level||"-").trim()||"-";
+}
+function trainerDisplayName(course){
+  return String(course?.Trainer||course?.trainer||course?.TrainerName||course?.trainerName||"-").trim()||"-";
+}
+function periodDisplayValue(course){
+  const raw=String(course?.Period||course?.period||course?.Time||course?.time||course?.CoursePeriod||course?.coursePeriod||"").trim();
+  if(!raw) return "-";
+  const x=raw.toLowerCase().replace(/\s+/g,"");
+  if(["4","4:00","4:00pm","4pm"].includes(x)) return "4 - 6";
+  if(["6","6:00","6:00pm","6pm"].includes(x)) return "6 - 8";
+  if(["8","8:00","8:00pm","8pm"].includes(x)) return "8 - 10";
+  return raw;
+}
+function startDateDisplayValue(course){
+  return String(course?.StartingDate||course?.startingDate||course?.StartDate||course?.startDate||"-").trim()||"-";
+}
+function studentIdentityValue(student){
+  return String(student?.iqama||student?.studentIqama||student?.Iqama||student?.studentID||student?.StudentID||student?.ID||"-").trim()||"-";
+}
+
 
 let SKILL_SCORES = {};
 let ACTIVITY_HISTORY = [];
@@ -403,7 +615,9 @@ window.addEventListener("pageshow", function(){
 
 });
 
-window.addEventListener("load", function(){
+window.addEventListener("load", async function(){
+
+  await applyReportLanguage();
 
   if(!hasValidStudentLogin()){
     return;
@@ -452,17 +666,17 @@ async function login(){
     const l4=last4.value.trim();
 
     if(!iq){
-      msg.textContent="أدخل رقم الهوية";
+      msg.textContent=T("enterId");
       return;
     }
 
     if(!l4 || l4.length!==4){
-      msg.textContent="أدخل آخر 4 أرقام";
+      msg.textContent=T("enterLast4");
       return;
     }
 
     if(!iq.endsWith(l4)){
-      msg.textContent="آخر 4 أرقام غير صحيحة";
+      msg.textContent=T("wrongLast4");
       return;
     }
 
@@ -478,7 +692,7 @@ async function login(){
         .get();
 
     if(q.empty){
-      msg.textContent="الطالب غير موجود";
+      msg.textContent=T("notFound");
       return;
     }
 
@@ -564,7 +778,7 @@ async function login(){
       لمنع أي التباس أو تكرار عند إعادة الترتيب.
     */
     courseSelector.innerHTML =
-      '<option value="">— اختر الدورة لعرض البيانات —</option>';
+      `<option value="">${T("chooseCourse")}</option>`;
 
     const renderedCourseIds =
       new Set();
@@ -681,7 +895,7 @@ async function login(){
     );
 
     msg.textContent =
-      "تعذر تحميل بيانات الطالب. حاول مرة أخرى.";
+      T("loadError");
 
   }finally{
 
@@ -703,11 +917,7 @@ async function loadCourse(loadToken = COURSE_LOAD_TOKEN){
   const STUDENT=data.student;
   const COURSE=data.course;
 
-  courseInfo.textContent =
-    `الدورة: ${COURSE.TrainingCourse||COURSE.CourseName||"-"} | المدرب: ${COURSE.Trainer||"-"} | الفترة: ${COURSE.Period||"-"} | تاريخ البدء: ${COURSE.StartingDate||"-"}`;
-
-  trainerComment.textContent =
-    STUDENT.trainerComment || "—";
+  await refreshLocalizedCourseText();
 
   renderAttendance(STUDENT);
 
@@ -747,7 +957,7 @@ function renderAttendance(STUDENT){
     .filter(x=>x && x.date)
     .sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
 
-  lastAttendance.textContent = last ? `${last.date} (${last.status})` : "—";
+  lastAttendance.textContent = last ? `${last.date} (${last.status==="present"?T("present"):last.status==="absent"?T("absent"):last.status})` : "—";
 
   const att = calcAttendanceScore(STUDENT);
   attScore.textContent = att==null ? "—" : `${att} / 10`;
@@ -807,11 +1017,12 @@ function renderGrades(STUDENT){
 }
 
 function gradeLabel(total){
-  if(total>=90) return {cls:"badge-green", lbl:"Excellent"};
-  if(total>=80) return {cls:"badge-green", lbl:"Very Good"};
-  if(total>=70) return {cls:"badge-yellow",lbl:"Good"};
-  if(total>=65) return {cls:"badge-orange",lbl:"Pass"};
-  return {cls:"badge-red",lbl:"Failed"};
+  const ar=REPORT_LANGUAGE==="ar";
+  if(total>=90) return {cls:"badge-green", lbl:ar?"ممتاز":"Excellent"};
+  if(total>=80) return {cls:"badge-green", lbl:ar?"جيد جداً":"Very Good"};
+  if(total>=70) return {cls:"badge-yellow",lbl:ar?"جيد":"Good"};
+  if(total>=65) return {cls:"badge-orange",lbl:ar?"ناجح":"Pass"};
+  return {cls:"badge-red",lbl:ar?"راسب":"Failed"};
 }
 
 /* ================= SKILLS (EnglishActivities) ================= */
@@ -1253,9 +1464,9 @@ function renderSkillBarChart(){
   SKILL_BAR_CHART = new Chart(ctx,{
     type:"bar",
     data:{
-      labels:SKILL_NAMES,
+      labels:SKILL_NAMES.map(localizedSkillName),
       datasets:[{
-        label:"Score",
+        label:REPORT_LANGUAGE==="ar"?"الدرجة":"Score",
         data:values,
         backgroundColor:[
           "#1abc9c",
@@ -1301,9 +1512,9 @@ function renderSkillRadarChart(){
   SUMMARY_CHART = new Chart(ctx,{
     type:"radar",
     data:{
-      labels:SKILL_NAMES,
+      labels:SKILL_NAMES.map(localizedSkillName),
       datasets:[{
-        label:"Skills",
+        label:REPORT_LANGUAGE==="ar"?"المهارات":"Skills",
         data:values,
         backgroundColor:"rgba(22,68,120,0.18)",
         borderColor:"#164478",
@@ -1347,7 +1558,7 @@ function renderWeakStrongSkillChart(){
   WEAK_STRONG_CHART = new Chart(ctx,{
     type:"doughnut",
     data:{
-      labels:["Weak Skills","Strong Skills"],
+      labels:REPORT_LANGUAGE==="ar"?["مهارات تحتاج تحسين","مهارات قوية"]:["Needs Improvement","Strong Skills"],
       datasets:[{
         data:[weak,strong],
         backgroundColor:["#e74c3c","#1abc9c"]
@@ -1400,7 +1611,9 @@ function getPlanColorClass(text){
 }
 /* ================= STUDY PLAN LIVE (StudyPlans) ================= */
 function renderPlanLive(COURSE){
-  const days=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس"];
+  const days=REPORT_LANGUAGE==="ar"
+    ? ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس"]
+    : ["Sunday","Monday","Tuesday","Wednesday","Thursday"];
   const duration = Number(COURSE.Duration)||Number(COURSE.Weeks)||8;
 
   const start = COURSE.StartingDate ? new Date(COURSE.StartingDate) : null;
@@ -1408,7 +1621,7 @@ function renderPlanLive(COURSE){
   const currentWeek = start ? Math.floor((now-start)/(1000*60*60*24*7))+1 : -1;
 
   if(!duration){
-    weeklyPlan.innerHTML = '<p class="hint">مدة الدورة غير موجودة (Duration)</p>';
+    weeklyPlan.innerHTML = `<p class="hint">${REPORT_LANGUAGE==="ar"?"مدة الدورة غير موجودة (Duration)":"Course duration is not available"}</p>`;
     return;
   }
 
@@ -1423,13 +1636,13 @@ function renderPlanLive(COURSE){
         map[`${p.week}_${p.day}`]=p.activity||"";
       });
 
-      let html="<table><tr><th>الأسبوع</th>";
+      let html=`<table><tr><th>${REPORT_LANGUAGE==="ar"?"الأسبوع":"Week"}</th>`;
       days.forEach(d=>html+=`<th>${d}</th>`);
       html+="</tr>";
 
       for(let w=1; w<=duration; w++){
         html += `<tr class="${w===currentWeek?'current-week':''}">
-          <td>الأسبوع ${w}</td>`;
+          <td>${REPORT_LANGUAGE==="ar"?"الأسبوع":"Week"} ${w}</td>`;
         days.forEach(d=>{
          const activity = map[`${w}_${d}`] || "";
 const cls = getPlanColorClass(activity);
@@ -1446,1247 +1659,341 @@ html += `
       weeklyPlan.innerHTML = html + "</table>";
     }, err=>{
       console.error(err);
-      weeklyPlan.innerHTML = '<p class="hint">تعذر تحميل الخطة. تحقق من صلاحيات Firestore.</p>';
+      weeklyPlan.innerHTML = `<p class="hint">${REPORT_LANGUAGE==="ar"?"تعذر تحميل الخطة. تحقق من صلاحيات Firestore.":"Unable to load the study plan. Check Firestore permissions."}</p>`;
     });
 }
 
-/* ================= PDF REPORT (ENGLISH, FULL) ================= */
-async function exportPDFReport(){
 
-  if(CURRENT_INDEX<0){
-    alert("اختر دورة أولاً");
-    return;
+
+function addProfessionalPdfBranding(doc,language){
+  const isAr=language==="ar";
+  const pages=doc.getNumberOfPages();
+  const w=doc.internal.pageSize.getWidth(), h=doc.internal.pageSize.getHeight();
+  for(let n=1;n<=pages;n++){
+    doc.setPage(n);
+    doc.setDrawColor(220,228,238);
+    doc.line(12,h-10,w-12,h-10);
+    doc.setFont(isAr?"PrudleArabic":"helvetica","normal");
+    doc.setFontSize(7); doc.setTextColor(105,118,135);
+    doc.text(isAr?`معهد برودل للغات | صفحة ${n} من ${pages}`:`Prudle Language Institute | Page ${n} of ${pages}`,
+             w/2,h-5,{align:"center"});
   }
+}
 
-  const {jsPDF} =
-    window.jspdf;
 
-  const doc =
-    new jsPDF(
-      "p",
-      "mm",
-      "a4"
-    );
+function executiveTableStyles(language){
+  return {font:language==="ar"?"PrudleArabic":"helvetica",fontSize:9,cellPadding:3.1,halign:"center",valign:"middle",overflow:"linebreak"};
+}
+function executiveHeadStyles(language){
+  return {font:language==="ar"?"PrudleArabic":"helvetica",fontStyle:"bold",fillColor:[22,68,120],textColor:255,halign:"center",valign:"middle",lineWidth:.1,lineColor:[215,223,232]};
+}
+function finalStatusColor(total){
+  const n=Number(total);
+  if(!Number.isFinite(n)) return [100,116,139];
+  if(n>=90) return [22,163,74];
+  if(n>=80) return [5,150,105];
+  if(n>=70) return [217,119,6];
+  if(n>=65) return [234,88,12];
+  return [220,38,38];
+}
 
+/* ================= PDF CHARTS - SAME CONTENT IN BOTH LANGUAGES ================= */
+function addAllSkillChartsPage(doc, language){
+  const isAr = language==="ar";
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   const BLUE=[22,68,120];
-  const LIGHT_BLUE=[240,246,252];
-  const GOLD=[244,185,66];
-  const GREEN=[23,166,115];
-  const RED=[231,76,60];
-  const GREY=[95,112,135];
 
-  const data =
-    COURSES[CURRENT_INDEX];
-
-  const STUDENT =
-    data.student;
-
-  const COURSE =
-    data.course;
-
-  const pageWidth =
-    doc.internal.pageSize.getWidth();
-
-  const pageHeight =
-    doc.internal.pageSize.getHeight();
-
-  function drawPageHeader(
-    title,
-    subtitle=""
-  ){
-
-    doc.setFillColor(...BLUE);
-    doc.roundedRect(
-      7,
-      7,
-      pageWidth-14,
-      25,
-      3,
-      3,
-      "F"
-    );
-
-    doc.setTextColor(255);
-    doc.setFontSize(15);
-    doc.setFont(
-      "helvetica",
-      "bold"
-    );
-
-    doc.text(
-      title,
-      pageWidth/2,
-      19,
-      {align:"center"}
-    );
-
-    if(subtitle){
-      doc.setFontSize(8.5);
-      doc.setFont(
-        "helvetica",
-        "normal"
-      );
-      doc.text(
-        subtitle,
-        pageWidth/2,
-        26,
-        {align:"center"}
-      );
+  const chartItems=[
+    {
+      chart:SKILL_BAR_CHART,
+      title:isAr ? "درجات المهارات" : "Skill Scores"
+    },
+    {
+      chart:SUMMARY_CHART,
+      title:isAr ? "مقارنة المهارات" : "Skills Comparison"
+    },
+    {
+      chart:WEAK_STRONG_CHART,
+      title:isAr ? "المهارات الضعيفة / القوية" : "Needs Improvement / Strong Skills"
     }
+  ].filter(item=>item.chart);
 
-    doc.setTextColor(0);
-  }
-
-
-  function drawSectionTitle(
-    title,
-    y
-  ){
-
-    doc.setFillColor(...LIGHT_BLUE);
-    doc.roundedRect(
-      10,
-      y,
-      pageWidth-20,
-      10,
-      2,
-      2,
-      "F"
-    );
-
-    doc.setTextColor(...BLUE);
-    doc.setFontSize(11);
-    doc.setFont(
-      "helvetica",
-      "bold"
-    );
-
-    doc.text(
-      title,
-      14,
-      y+6.5
-    );
-
-    doc.setTextColor(0);
-
-    return y+13;
-  }
-
-
-  function addFooter(
-    pageNumber
-  ){
-
-    doc.setDrawColor(
-      220,
-      230,
-      239
-    );
-
-    doc.line(
-      10,
-      pageHeight-12,
-      pageWidth-10,
-      pageHeight-12
-    );
-
-    doc.setFontSize(8);
-    doc.setTextColor(...GREY);
-
-    doc.text(
-      "Prudle Institute — Student Academic Report",
-      10,
-      pageHeight-7
-    );
-
-    doc.text(
-      `Page ${pageNumber}`,
-      pageWidth-10,
-      pageHeight-7,
-      {align:"right"}
-    );
-
-    doc.setTextColor(0);
-  }
-
-
-  /* =====================================================
-     PAGE 1 — ACADEMIC SUMMARY
-  ===================================================== */
-
-  drawPageHeader(
-    "Prudle – Student Academic Report",
-    "Academic Summary"
-  );
-
-  await tryAddImage(
-    doc,
-    PDF_LOGO_URL,
-    12,
-    9,
-    20,
-    20
-  );
-
-  doc.autoTable({
-    startY:37,
-    theme:"grid",
-    margin:{left:10,right:10},
-    head:[
-      [
-        "Student Information",
-        "Details"
-      ]
-    ],
-    body:[
-      ["Name",STUDENT.name || "-"],
-      ["ID / Iqama",STUDENT.iqama || "-"],
-      [
-        "Course",
-        COURSE.TrainingCourse ||
-        COURSE.CourseName ||
-        "-"
-      ],
-      ["Trainer",COURSE.Trainer || "-"],
-      ["Period",COURSE.Period || "-"],
-      ["Start Date",COURSE.StartingDate || "-"]
-    ],
-    headStyles:{
-      fillColor:BLUE,
-      textColor:255,
-      fontStyle:"bold"
-    },
-    styles:{
-      fontSize:9,
-      cellPadding:3
-    },
-    columnStyles:{
-      0:{
-        fontStyle:"bold",
-        fillColor:LIGHT_BLUE,
-        cellWidth:48
-      }
-    }
-  });
-
-  const att =
-    calcAttendanceScore(
-      STUDENT
-    );
-
-  const records =
-    Array.isArray(STUDENT.records)
-      ? STUDENT.records
-      : [];
-
-  const present =
-    records.filter(
-      x=>x && x.status==="present"
-    ).length;
-
-  const absent =
-    records.filter(
-      x=>x && x.status==="absent"
-    ).length;
-
-  doc.autoTable({
-    startY:
-      doc.lastAutoTable.finalY+5,
-    theme:"grid",
-    margin:{left:10,right:10},
-    head:[
-      [
-        "Attendance",
-        "Value"
-      ]
-    ],
-    body:[
-      ["Present Days",String(present)],
-      ["Absent Days",String(absent)],
-      [
-        "Attendance Score",
-        att==null
-          ? "-"
-          : `${att} / 10`
-      ]
-    ],
-    headStyles:{
-      fillColor:BLUE,
-      textColor:255
-    },
-    styles:{
-      fontSize:9,
-      cellPadding:3
-    }
-  });
-
-  const midV=STUDENT.midterm;
-  const finV=STUDENT.finalExam;
-  const homeV=STUDENT.hwScore;
-  const speakV=STUDENT.speaking;
-  const listenV=STUDENT.listening;
-
-  const isComplete =
-    midV!=null &&
-    finV!=null &&
-    homeV!=null &&
-    speakV!=null &&
-    listenV!=null &&
-    att!=null;
-
-  let total=null;
-  let statusText="-";
-
-  if(isComplete){
-
-    total =
-      Number(midV)+
-      Number(finV)+
-      Number(homeV)+
-      Number(speakV)+
-      Number(listenV)+
-      Number(att);
-
-    statusText =
-      gradeLabel(total).lbl;
-  }
-
-  const gradesBody=[
-    ["Midterm",midV ?? "-"],
-    ["Final Exam",finV ?? "-"],
-    ["Homework",homeV ?? "-"],
-    ["Attendance",att ?? "-"],
-    ["Listening",listenV ?? "-"],
-    ["Speaking",speakV ?? "-"]
-  ];
-
-  if(total!=null){
-    gradesBody.push(
-      ["TOTAL",`${total} / 100`]
-    );
-    gradesBody.push(
-      ["Final Status",statusText]
-    );
-  }
-
-  doc.autoTable({
-    startY:
-      doc.lastAutoTable.finalY+5,
-    theme:"grid",
-    margin:{left:10,right:10},
-    head:[
-      [
-        "Course Grades",
-        "Value"
-      ]
-    ],
-    body:gradesBody,
-    headStyles:{
-      fillColor:BLUE,
-      textColor:255
-    },
-    styles:{
-      fontSize:9,
-      cellPadding:3
-    },
-    didParseCell(d){
-
-      if(!d.row.raw){
-        return;
-      }
-
-      const rowTitle =
-        d.row.raw[0];
-
-      const rowValue =
-        d.row.raw[1];
-
-      if(rowTitle==="TOTAL"){
-        d.cell.styles.fontStyle="bold";
-        d.cell.styles.fillColor=[232,245,238];
-      }
-
-      if(rowTitle==="Final Status"){
-
-        d.cell.styles.fontStyle="bold";
-
-        if(rowValue==="Excellent"){
-          d.cell.styles.fillColor=[46,204,113];
-          d.cell.styles.textColor=[255,255,255];
-        }else if(rowValue==="Very Good"){
-          d.cell.styles.fillColor=[39,174,96];
-          d.cell.styles.textColor=[255,255,255];
-        }else if(rowValue==="Good"){
-          d.cell.styles.fillColor=[241,196,15];
-          d.cell.styles.textColor=[0,0,0];
-        }else if(rowValue==="Pass"){
-          d.cell.styles.fillColor=[230,126,34];
-          d.cell.styles.textColor=[255,255,255];
-        }else if(rowValue==="Failed"){
-          d.cell.styles.fillColor=[231,76,60];
-          d.cell.styles.textColor=[255,255,255];
-        }
-      }
-    }
-  });
-
-  addFooter(1);
-
-
-  /* =====================================================
-     PAGE 2 — TRAINER COMMENT + ACTIVITIES + SKILLS
-  ===================================================== */
+  if(!chartItems.length) return;
 
   doc.addPage();
-
-  drawPageHeader(
-    "Academic Performance Details",
-    `${COURSE.TrainingCourse || COURSE.CourseName || "Course"} — ${STUDENT.name || "Student"}`
-  );
-
-  let y=38;
-
-
-  /* ---------- Trainer Comment ---------- */
-
-  y =
-    drawSectionTitle(
-      "Trainer Comment",
-      y
-    );
-
-  const commentText =
-    String(
-      STUDENT.trainerComment ||
-      "No trainer comment has been added yet."
-    );
-
-  const commentLines =
-    doc.splitTextToSize(
-      commentText,
-      pageWidth-34
-    );
-
-  const commentHeight =
-    Math.max(
-      24,
-      commentLines.length*5 + 13
-    );
-
-  doc.setFillColor(
-    249,
-    251,
-    253
-  );
-
-  doc.setDrawColor(
-    218,
-    229,
-    239
-  );
-
-  doc.roundedRect(
-    12,
-    y,
-    pageWidth-24,
-    commentHeight,
-    3,
-    3,
-    "FD"
-  );
-
-  doc.setTextColor(...GREY);
-  doc.setFontSize(8);
+  doc.setFillColor(...BLUE);
+  doc.rect(0,0,pageWidth,27,"F");
+  doc.setTextColor(255);
+  doc.setFont(isAr ? "PrudleArabic" : "helvetica","bold");
+  doc.setFontSize(16);
   doc.text(
-    "Trainer feedback and academic guidance",
-    16,
-    y+7
+    isAr ? "التحليل البياني للمهارات" : "Skills Visual Analysis",
+    pageWidth/2,12,{align:"center"}
   );
-
-  doc.setTextColor(25,45,65);
-  doc.setFontSize(10);
-
+  doc.setFontSize(9);
   doc.text(
-    commentLines,
-    16,
-    y+14,
-    {
-      maxWidth:pageWidth-32
-    }
+    isAr ? "عرض موحد لجميع الرسوم البيانية" : "Complete visual summary of skill performance",
+    pageWidth/2,19,{align:"center"}
   );
 
-  y +=
-    commentHeight + 7;
-
-
-  /* ---------- Previous Activity Grades ---------- */
-
-  y =
-    drawSectionTitle(
-      "Solved Activity Grades",
-      y
-    );
-
-  const activityRows =
-    ACTIVITY_HISTORY.length
-      ? ACTIVITY_HISTORY.map(
-          (item,index)=>[
-            String(index+1),
-            item.title || "Activity",
-            item.total > 0
-              ? `${item.score} / ${item.total}`
-              : String(item.score),
-            `${item.percent}%`,
-            item.date || "-"
-          ]
-        )
-      : [
-          [
-            "-",
-            "No solved activity results found",
-            "-",
-            "-",
-            "-"
-          ]
-        ];
-
-  doc.autoTable({
-    startY:y,
-    theme:"grid",
-    margin:{
-      left:12,
-      right:12
-    },
-    head:[
-      [
-        "#",
-        "Solved Activity / Quiz",
-        "Correct / Total",
-        "Grade",
-        "Date"
-      ]
-    ],
-    body:activityRows,
-    headStyles:{
-      fillColor:BLUE,
-      textColor:255,
-      fontStyle:"bold",
-      halign:"center"
-    },
-    styles:{
-      fontSize:8,
-      cellPadding:2.5,
-      overflow:"linebreak",
-      valign:"middle"
-    },
-    columnStyles:{
-      0:{
-        cellWidth:10,
-        halign:"center"
-      },
-      1:{
-        cellWidth:78
-      },
-      2:{
-        cellWidth:31,
-        halign:"center"
-      },
-      3:{
-        cellWidth:28,
-        halign:"center",
-        fontStyle:"bold"
-      },
-      4:{
-        cellWidth:31,
-        halign:"center"
-      }
-    },
-    didParseCell(d){
-
-      if(
-        d.section==="body" &&
-        d.column.index===3
-      ){
-
-        const pct =
-          Number(
-            String(
-              d.cell.raw || ""
-            ).replace("%","")
-          );
-
-        if(pct>=80){
-          d.cell.styles.fillColor=[232,248,241];
-          d.cell.styles.textColor=[20,120,80];
-        }else if(pct>=60){
-          d.cell.styles.fillColor=[255,247,218];
-          d.cell.styles.textColor=[126,91,0];
-        }else if(Number.isFinite(pct)){
-          d.cell.styles.fillColor=[255,236,233];
-          d.cell.styles.textColor=[170,50,40];
-        }
-      }
-    }
-  });
-
-  y =
-    doc.lastAutoTable.finalY + 6;
-
-
-  /* ---------- Final Activity Average ---------- */
-
-  if(
-    ACTIVITY_FINAL_AVERAGE !== null
-  ){
-
-    const avg =
-      Number(
-        ACTIVITY_FINAL_AVERAGE
-      );
-
-    let avgColor =
-      GREEN;
-
-    let avgLabel =
-      "Excellent";
-
-    if(avg < 60){
-      avgColor = RED;
-      avgLabel = "Needs Improvement";
-    }else if(avg < 80){
-      avgColor = GOLD;
-      avgLabel = "Good";
-    }
-
-    doc.setFillColor(
-      246,
-      249,
-      252
-    );
-
-    doc.setDrawColor(
-      218,
-      229,
-      239
-    );
-
-    doc.roundedRect(
-      12,
-      y,
-      pageWidth-24,
-      18,
-      3,
-      3,
-      "FD"
-    );
-
-    doc.setFont(
-      "helvetica",
-      "bold"
-    );
-
-    doc.setFontSize(10);
-    doc.setTextColor(...BLUE);
-
-    doc.text(
-      "Final Activities Average",
-      17,
-      y+7
-    );
-
-    doc.setTextColor(...avgColor);
-    doc.setFontSize(14);
-
-    doc.text(
-      `${avg}%`,
-      pageWidth-18,
-      y+8,
-      {
-        align:"right"
-      }
-    );
-
-    doc.setFontSize(8);
-    doc.text(
-      avgLabel,
-      pageWidth-18,
-      y+14,
-      {
-        align:"right"
-      }
-    );
-
-    doc.setTextColor(0);
-
-    y += 25;
-
-  }
-
-
-  /*
-    إذا أصبح جدول النشاطات طويلاً ووصل قرب نهاية الصفحة،
-    AutoTable ينشئ صفحات إضافية تلقائياً.
-  */
-  if(y > pageHeight-92){
-    doc.addPage();
-    drawPageHeader(
-      "Academic Performance Details",
-      "Skills Evaluation"
-    );
-    y=38;
-  }
-
-
-  /* ---------- Skill Evaluation ---------- */
-
-  y =
-    drawSectionTitle(
-      "Skill Evaluation",
-      y
-    );
-
-  const skillRows =
-    SKILL_NAMES.map(
-      skill=>{
-
-        const value =
-          Number(
-            SKILL_SCORES[skill] || 0
-          );
-
-        let level =
-          "Needs Improvement";
-
-        if(value>=8){
-          level="Strong";
-        }else if(value>=6){
-          level="Good";
-        }else if(value>0){
-          level="Developing";
-        }else{
-          level="Not Assessed";
-        }
-
-        return [
-          skill,
-          `${value} / 10`,
-          "",
-          level
-        ];
-      }
-    );
-
-  /*
-    المعدل النهائي لتقييم المهارات:
-    نحسب فقط المهارات التي تم تقييمها فعلياً (> 0)
-    حتى لا تخفض المهارات غير المقيمة المعدل.
-  */
-  const assessedSkillValues =
-    SKILL_NAMES
-      .map(
-        skill=>
-          Number(
-            SKILL_SCORES[skill] || 0
-          )
-      )
-      .filter(
-        value=>
-          Number.isFinite(value) &&
-          value > 0
-      );
-
-  const skillFinalAverage =
-    assessedSkillValues.length
-      ? (
-          assessedSkillValues.reduce(
-            (sum,value)=>sum+value,
-            0
-          ) /
-          assessedSkillValues.length
-        )
-      : null;
-
-  doc.autoTable({
-    startY:y,
-    theme:"grid",
-    margin:{
-      left:12,
-      right:12
-    },
-    head:[
-      [
-        "Skill",
-        "Score",
-        "Mini Chart",
-        "Performance"
-      ]
-    ],
-    body:skillRows,
-    headStyles:{
-      fillColor:BLUE,
-      textColor:255,
-      fontStyle:"bold",
-      halign:"center"
-    },
-    styles:{
-      fontSize:8.3,
-      cellPadding:3,
-      halign:"center",
-      valign:"middle",
-      minCellHeight:10
-    },
-    columnStyles:{
-      0:{
-        halign:"left",
-        fontStyle:"bold",
-        cellWidth:43
-      },
-      1:{
-        cellWidth:27,
-        fontStyle:"bold"
-      },
-      2:{
-        cellWidth:58
-      },
-      3:{
-        cellWidth:48
-      }
-    },
-
-    didParseCell(d){
-
-      if(
-        d.section==="body" &&
-        d.column.index===3
-      ){
-
-        const value =
-          String(
-            d.cell.raw || ""
-          );
-
-        if(value==="Strong"){
-          d.cell.styles.fillColor=[229,248,239];
-          d.cell.styles.textColor=[20,130,85];
-        }else if(value==="Good"){
-          d.cell.styles.fillColor=[235,244,253];
-          d.cell.styles.textColor=BLUE;
-        }else if(value==="Developing"){
-          d.cell.styles.fillColor=[255,246,215];
-          d.cell.styles.textColor=[130,91,0];
-        }else{
-          d.cell.styles.fillColor=[245,246,248];
-          d.cell.styles.textColor=GREY;
-        }
-      }
-    },
-
-    /*
-      رسم شريط بياني صغير بجانب كل مهارة
-      مباشرة داخل خلية Mini Chart.
-    */
-    didDrawCell(d){
-
-      if(
-        d.section!=="body" ||
-        d.column.index!==2
-      ){
-        return;
-      }
-
-      const rowIndex =
-        d.row.index;
-
-      const skill =
-        SKILL_NAMES[rowIndex];
-
-      const value =
-        Number(
-          SKILL_SCORES[skill] || 0
-        );
-
-      const x =
-        d.cell.x + 4;
-
-      const yBar =
-        d.cell.y +
-        (d.cell.height - 4.2) / 2;
-
-      const maxWidth =
-        d.cell.width - 8;
-
-      const barHeight =
-        4.2;
-
-      const safeValue =
-        Math.max(
-          0,
-          Math.min(
-            10,
-            value
-          )
-        );
-
-      const filledWidth =
-        maxWidth *
-        (safeValue / 10);
-
-      /*
-        خلفية الشريط.
-      */
-      doc.setFillColor(
-        232,
-        238,
-        244
-      );
-
-      doc.roundedRect(
-        x,
-        yBar,
-        maxWidth,
-        barHeight,
-        1.5,
-        1.5,
-        "F"
-      );
-
-      /*
-        لون الشريط حسب الدرجة.
-      */
-      if(safeValue>=8){
-        doc.setFillColor(
-          23,
-          166,
-          115
-        );
-      }else if(safeValue>=6){
-        doc.setFillColor(
-          52,
-          152,
-          219
-        );
-      }else if(safeValue>0){
-        doc.setFillColor(
-          244,
-          185,
-          66
-        );
-      }else{
-        doc.setFillColor(
-          180,
-          190,
-          200
-        );
-      }
-
-      if(filledWidth>0){
-        doc.roundedRect(
-          x,
-          yBar,
-          filledWidth,
-          barHeight,
-          1.5,
-          1.5,
-          "F"
-        );
-      }
-
-      /*
-        نقاط بداية ونهاية صغيرة لتحسين شكل الرسم.
-      */
-      doc.setDrawColor(
-        210,
-        220,
-        230
-      );
-
-      doc.setLineWidth(.2);
-
-      for(let tick=0;tick<=10;tick+=2){
-
-        const tickX =
-          x +
-          maxWidth *
-          (tick / 10);
-
-        doc.line(
-          tickX,
-          yBar + barHeight + .6,
-          tickX,
-          yBar + barHeight + 1.5
-        );
-      }
-    }
-  });
-
-  y =
-    doc.lastAutoTable.finalY + 7;
-
-
-  /* ---------- Final Skills Evaluation Average ---------- */
-
-  if(skillFinalAverage !== null){
-
-    const averageOutOf10 =
-      Math.round(
-        skillFinalAverage * 10
-      ) / 10;
-
-    const averagePercent =
-      Math.round(
-        skillFinalAverage * 10
-      );
-
-    let avgLabel =
-      "Needs Improvement";
-
-    let avgColor =
-      RED;
-
-    if(averageOutOf10>=8){
-      avgLabel="Strong";
-      avgColor=GREEN;
-    }else if(averageOutOf10>=6){
-      avgLabel="Good";
-      avgColor=[52,152,219];
-    }else if(averageOutOf10>0){
-      avgLabel="Developing";
-      avgColor=GOLD;
-    }
-
-    /*
-      إذا لم تكف المساحة، ننقل بطاقة المعدل كاملة
-      إلى الصفحة التالية.
-    */
-    if(y > pageHeight-42){
-
+  let y=34;
+  const boxH=76;
+
+  chartItems.forEach((item,index)=>{
+    if(y+boxH>pageHeight-14){
       doc.addPage();
-
-      drawPageHeader(
-        "Academic Performance Details",
-        "Final Skills Evaluation"
-      );
-
-      y=39;
+      y=18;
     }
 
-    doc.setFillColor(
-      247,
-      250,
-      253
-    );
-
-    doc.setDrawColor(
-      215,
-      226,
-      237
-    );
-
-    doc.roundedRect(
-      12,
-      y,
-      pageWidth-24,
-      24,
-      3,
-      3,
-      "FD"
-    );
-
-    doc.setFont(
-      "helvetica",
-      "bold"
-    );
+    doc.setFillColor(250,252,254);
+    doc.setDrawColor(218,227,238);
+    doc.roundedRect(12,y,pageWidth-24,boxH,3,3,"FD");
 
     doc.setTextColor(...BLUE);
-    doc.setFontSize(10.5);
-
-    doc.text(
-      "Final Skills Evaluation Average",
-      17,
-      y+7
-    );
-
-    doc.setTextColor(...avgColor);
-    doc.setFontSize(16);
-
-    doc.text(
-      `${averageOutOf10} / 10`,
-      pageWidth-18,
-      y+9,
-      {
-        align:"right"
-      }
-    );
-
-    doc.setFontSize(9);
-
-    doc.text(
-      `${averagePercent}%  •  ${avgLabel}`,
-      pageWidth-18,
-      y+16,
-      {
-        align:"right"
-      }
-    );
-
-    /*
-      شريط معدل عام أسفل البطاقة.
-    */
-    const avgBarX =
-      17;
-
-    const avgBarY =
-      y+18;
-
-    const avgBarWidth =
-      pageWidth-78;
-
-    const avgBarHeight =
-      3.4;
-
-    doc.setFillColor(
-      226,
-      233,
-      240
-    );
-
-    doc.roundedRect(
-      avgBarX,
-      avgBarY,
-      avgBarWidth,
-      avgBarHeight,
-      1.3,
-      1.3,
-      "F"
-    );
-
-    doc.setFillColor(
-      ...avgColor
-    );
-
-    doc.roundedRect(
-      avgBarX,
-      avgBarY,
-      avgBarWidth *
-        (
-          Math.max(
-            0,
-            Math.min(
-              10,
-              averageOutOf10
-            )
-          ) / 10
-        ),
-      avgBarHeight,
-      1.3,
-      1.3,
-      "F"
-    );
-
-    doc.setTextColor(0);
-
-    y += 30;
-  }
-
-
-  /*
-    الرسم البياني الكبير يبقى اختياريًا ومصغرًا.
-    إذا لم توجد مساحة كافية، لا يتم إضافته لأن
-    كل مهارة أصبحت تحتوي بالفعل على رسم مصغر.
-  */
-  if(
-    SKILL_BAR_CHART &&
-    y <= pageHeight-63
-  ){
+    doc.setFont(isAr ? "PrudleArabic" : "helvetica","bold");
+    doc.setFontSize(10);
+    doc.text(item.title,pageWidth/2,y+7,{align:"center"});
 
     try{
-
-      const img =
-        SKILL_BAR_CHART.toBase64Image();
-
-      doc.setFillColor(
-        250,
-        252,
-        254
-      );
-
-      doc.setDrawColor(
-        221,
-        231,
-        240
-      );
-
-      doc.roundedRect(
-        12,
-        y,
-        pageWidth-24,
-        48,
-        3,
-        3,
-        "FD"
-      );
-
-      doc.setFontSize(8.5);
-      doc.setTextColor(...BLUE);
-      doc.setFont(
-        "helvetica",
-        "bold"
-      );
-
-      doc.text(
-        "Skills Overview",
-        pageWidth/2,
-        y+6,
-        {align:"center"}
-      );
-
-      doc.addImage(
-        img,
-        "PNG",
-        25,
-        y+8,
-        pageWidth-50,
-        35
-      );
-
+      const img=item.chart.toBase64Image();
+      doc.addImage(img,"PNG",24,y+11,pageWidth-48,58);
     }catch(error){
-
-      console.warn(
-        "Unable to add skills chart:",
-        error
+      console.warn("Unable to add PDF chart:",error);
+      doc.setTextColor(120);
+      doc.setFontSize(8);
+      doc.text(
+        isAr ? "تعذر إضافة الرسم البياني" : "Unable to add chart",
+        pageWidth/2,y+38,{align:"center"}
       );
     }
+
+    y+=boxH+6;
+  });
+}
+
+/* ================= PDF ARABIC TRANSLATION ================= */
+const PDF_TRANSLATION_CACHE = new Map();
+
+async function translatePDFTextToArabic(text){
+  const original = String(text || "").trim();
+  if(!original) return original;
+
+  if(/[\u0600-\u06FF]/.test(original)){
+    return original;
   }
 
-
-  /*
-    Footer لكل الصفحات الموجودة.
-  */
-  const totalPages =
-    doc.getNumberOfPages();
-
-  for(
-    let pageNo=2;
-    pageNo<=totalPages;
-    pageNo++
-  ){
-    doc.setPage(pageNo);
-    addFooter(pageNo);
+  if(PDF_TRANSLATION_CACHE.has(original)){
+    return PDF_TRANSLATION_CACHE.get(original);
   }
 
-  const safeName =
-    String(
-      STUDENT.name ||
-      "Student"
-    )
-    .replace(
-      /[\\/:*?"<>|]/g,
-      "-"
-    );
+  try{
+    const url =
+      "https://translate.googleapis.com/translate_a/single" +
+      "?client=gtx&sl=auto&tl=ar&dt=t&q=" +
+      encodeURIComponent(original);
 
-  doc.save(
-    `Prudle_Report_${safeName}.pdf`
-  );
+    const response = await fetch(url);
+
+    if(!response.ok){
+      throw new Error("Translation request failed");
+    }
+
+    const data = await response.json();
+
+    const translated =
+      Array.isArray(data?.[0])
+        ? data[0].map(part=>part?.[0] || "").join("")
+        : original;
+
+    const finalText = translated || original;
+    PDF_TRANSLATION_CACHE.set(original, finalText);
+    return finalText;
+
+  }catch(error){
+    console.warn("PDF Arabic translation fallback:", error);
+    return original;
+  }
+}
+
+function pdfArabicGradeLabel(value){
+  const map = {
+    "Excellent":"ممتاز",
+    "Very Good":"جيد جداً",
+    "Good":"جيد",
+    "Pass":"ناجح",
+    "Failed":"راسب",
+    "Strong":"قوي",
+    "Developing":"قيد التطوير",
+    "Needs Improvement":"يحتاج إلى تحسين",
+    "Not Assessed":"لم يتم التقييم"
+  };
+  return map[String(value || "")] || String(value || "");
+}
+
+/* ================= PDF REPORT (ARABIC, FULL) ================= */
+async function exportPDFReportArabic(){
+  return exportProfessionalPDF("ar");
+}
+
+
+
+/* ================= PROFESSIONAL UNIFIED PDF V5 ================= */
+function v5Status(total,lang){
+  const n=Number(total);
+  if(!Number.isFinite(n)) return {label:"-",color:[100,116,139]};
+  if(n>=90) return {label:lang==="ar"?"ممتاز":"Excellent",color:[22,163,74]};
+  if(n>=80) return {label:lang==="ar"?"جيد جداً":"Very Good",color:[5,150,105]};
+  if(n>=70) return {label:lang==="ar"?"جيد":"Good",color:[217,119,6]};
+  if(n>=65) return {label:lang==="ar"?"ناجح":"Pass",color:[234,88,12]};
+  return {label:lang==="ar"?"راسب":"Failed",color:[220,38,38]};
+}
+function v5Font(doc,lang,style="normal"){
+  doc.setFont(lang==="ar"?"PrudleArabic":"helvetica",style);
+}
+function v5Section(doc,title,y,lang){
+  doc.setFillColor(22,68,120); doc.roundedRect(12,y,186,10,2,2,"F");
+  doc.setTextColor(255); v5Font(doc,lang,"bold"); doc.setFontSize(10.5);
+  doc.text(title,105,y+6.5,{align:"center"}); doc.setTextColor(30,40,55);
+  return y+13;
+}
+function v5Table(doc,head,body,y,lang){
+  doc.autoTable({
+    startY:y,theme:"grid",margin:{left:12,right:12},head:[head],body,
+    headStyles:{font:lang==="ar"?"PrudleArabic":"helvetica",fontStyle:"bold",
+      fillColor:[31,78,121],textColor:255,halign:"center",valign:"middle",cellPadding:3},
+    styles:{font:lang==="ar"?"PrudleArabic":"helvetica",fontSize:8.7,
+      textColor:[45,55,70],halign:"center",valign:"middle",cellPadding:3,
+      lineColor:[215,222,230],lineWidth:.12},
+    alternateRowStyles:{fillColor:[248,250,252]}
+  });
+  return doc.lastAutoTable.finalY;
+}
+function v5Header(doc,lang){
+  doc.setFillColor(22,68,120); doc.roundedRect(12,10,186,25,3,3,"F");
+  doc.setTextColor(255); v5Font(doc,lang,"bold"); doc.setFontSize(15);
+  doc.text(lang==="ar"?"التقرير الأكاديمي للطالب":"Student Academic Report",105,20,{align:"center"});
+  v5Font(doc,lang,"normal"); doc.setFontSize(8.5);
+  doc.text(lang==="ar"?"تقرير أكاديمي شامل • معهد برودل للغات":"Comprehensive Academic Report • Prudle Language Institute",105,27,{align:"center"});
+  doc.setTextColor(0);
+}
+function v5Footer(doc,lang){
+  const pages=doc.getNumberOfPages(),w=doc.internal.pageSize.getWidth(),h=doc.internal.pageSize.getHeight();
+  for(let p=1;p<=pages;p++){
+    doc.setPage(p); doc.setDrawColor(225,230,236); doc.line(12,h-11,w-12,h-11);
+    v5Font(doc,lang,"normal"); doc.setFontSize(7); doc.setTextColor(105,118,135);
+    doc.text(lang==="ar"?`معهد برودل للغات • صفحة ${p} من ${pages}`:`Prudle Language Institute • Page ${p} of ${pages}`,w/2,h-6,{align:"center"});
+  }
+}
+async function exportProfessionalPDF(lang){
+  if(CURRENT_INDEX<0){alert(lang==="ar"?"اختر دورة أولاً":"Select a course first");return;}
+  const {jsPDF}=window.jspdf,doc=new jsPDF("p","mm","a4");
+  const {student:STUDENT,course:COURSE}=COURSES[CURRENT_INDEX], ar=lang==="ar";
+
+  if(ar){
+    try{
+      doc.addFileToVFS("NotoSansArabic-Regular.ttf",PRUDLE_ARABIC_FONT);
+      doc.addFont("NotoSansArabic-Regular.ttf","PrudleArabic","normal");
+      if(typeof PRUDLE_ARABIC_BOLD!=="undefined"){
+        doc.addFileToVFS("NotoSansArabic-Bold.ttf",PRUDLE_ARABIC_BOLD);
+        doc.addFont("NotoSansArabic-Bold.ttf","PrudleArabic","bold");
+      }
+    }catch(e){console.warn(e);}
+  }
+
+  const records=Array.isArray(STUDENT.records)?STUDENT.records:[];
+  const present=records.filter(x=>x?.status==="present").length;
+  const absent=records.filter(x=>x?.status==="absent").length;
+  const att=calcAttendanceScore(STUDENT);
+  const vals=[STUDENT.midterm,STUDENT.finalExam,STUDENT.hwScore,STUDENT.speaking,STUDENT.listening,att];
+  const complete=vals.every(v=>v!=null);
+  const total=complete?vals.reduce((a,b)=>a+Number(b),0):null;
+  const status=v5Status(total,lang);
+
+  v5Header(doc,lang); let y=41;
+  y=v5Section(doc,ar?"بيانات الطالب":"Student Information",y,lang);
+
+  const info=ar?[
+    ["الاسم",STUDENT.name||"-"],["الهوية / الإقامة",studentIdentityValue(STUDENT)],
+    ["الدورة",courseDisplayName(COURSE)],["المدرب",trainerDisplayName(COURSE)],
+    ["الفترة",periodDisplayValue(COURSE)],["تاريخ البدء",startDateDisplayValue(COURSE)]
+  ]:[
+    ["Name",STUDENT.name||"-"],["ID / Iqama",studentIdentityValue(STUDENT)],
+    ["Course",courseDisplayName(COURSE)],["Trainer",trainerDisplayName(COURSE)],
+    ["Period",periodDisplayValue(COURSE)],["Start Date",startDateDisplayValue(COURSE)]
+  ];
+  // New compact 3-column administrative grid: Field | Value
+  y=v5Table(doc,ar?["البيان","القيمة"]:["Field","Value"],info,y,lang)+6;
+
+  y=v5Section(doc,ar?"ملخص الحضور":"Attendance Summary",y,lang);
+  y=v5Table(doc,ar?["أيام الحضور","أيام الغياب","درجة الحضور"]:["Present Days","Absent Days","Attendance Score"],
+    [[present,absent,att==null?"-":`${att} / 10`]],y,lang)+6;
+
+  y=v5Section(doc,ar?"درجات الدورة":"Course Grades",y,lang);
+  y=v5Table(doc,
+    ar?["منتصف الدورة","النهائي","الواجبات","الحضور","الاستماع","التحدث"]:
+       ["Midterm","Final","Homework","Attendance","Listening","Speaking"],
+    [[STUDENT.midterm??"-",STUDENT.finalExam??"-",STUDENT.hwScore??"-",att??"-",STUDENT.listening??"-",STUDENT.speaking??"-"]],
+    y,lang)+5;
+
+  doc.setFillColor(248,250,252); doc.setDrawColor(...status.color); doc.setLineWidth(.7);
+  doc.roundedRect(12,y,186,22,3,3,"FD"); doc.setLineWidth(.2);
+  v5Font(doc,lang,"bold"); doc.setTextColor(22,68,120); doc.setFontSize(9);
+  doc.text(ar?"الإجمالي":"Total",48,y+7,{align:"center"});
+  doc.setFontSize(15); doc.text(total==null?"-":`${total} / 100`,48,y+16,{align:"center"});
+  doc.setFillColor(...status.color); doc.roundedRect(108,y+3,82,16,3,3,"F");
+  doc.setTextColor(255); doc.setFontSize(9);
+  doc.text(ar?"التقدير النهائي":"Final Status",149,y+8,{align:"center"});
+  doc.setFontSize(12); doc.text(status.label,149,y+15,{align:"center"});
+
+  doc.addPage(); v5Header(doc,lang); y=41;
+  y=v5Section(doc,ar?"تعليق المدرب والإرشاد الأكاديمي":"Trainer Feedback & Academic Guidance",y,lang);
+  let comment=STUDENT.trainerComment||"";
+  comment=comment?await translateTextForLanguage(comment,lang):(ar?"لم تتم إضافة تعليق من المدرب.":"No trainer comment has been added.");
+  doc.setFillColor(248,250,252); doc.setDrawColor(220,226,234); doc.roundedRect(12,y,186,27,3,3,"FD");
+  v5Font(doc,lang,"normal"); doc.setFontSize(9); doc.setTextColor(50,60,75);
+  doc.text(doc.splitTextToSize(comment,174),105,y+8,{align:"center"}); y+=34;
+
+  y=v5Section(doc,ar?"درجات الأنشطة المحلولة":"Solved Activity Grades",y,lang);
+  const activities=ACTIVITY_HISTORY.length?ACTIVITY_HISTORY.map((x,i)=>[
+    i+1,x.title||(ar?"نشاط":"Activity"),x.total>0?`${x.score} / ${x.total}`:String(x.score),`${x.percent}%`,x.date||"-"
+  ]):[["-",ar?"لا توجد نتائج لأنشطة محلولة":"No solved activity results found","-","-","-"]];
+  y=v5Table(doc,ar?["#","النشاط / الاختبار","الصحيح / الإجمالي","الدرجة","التاريخ"]:
+                    ["#","Activity / Quiz","Correct / Total","Grade","Date"],activities,y,lang)+6;
+
+  if(y>190){doc.addPage();v5Header(doc,lang);y=41;}
+  y=v5Section(doc,ar?"تقييم المهارات":"Skills Evaluation",y,lang);
+  const arSkill={Listening:"الاستماع",Speaking:"التحدث",Reading:"القراءة",Writing:"الكتابة",Grammar:"القواعد",Vocabulary:"المفردات"};
+  const skills=SKILL_NAMES.map(skill=>{
+    const v=Number(SKILL_SCORES[skill]||0);
+    const p=v>=8?(ar?"قوي":"Strong"):v>=6?(ar?"جيد":"Good"):v>0?(ar?"قيد التطوير":"Developing"):(ar?"لم يتم التقييم":"Not Assessed");
+    return [ar?(arSkill[skill]||skill):skill,`${v} / 10`,p];
+  });
+  y=v5Table(doc,ar?["المهارة","الدرجة","الأداء"]:["Skill","Score","Performance"],skills,y,lang)+5;
+
+  const assessed=SKILL_NAMES.map(k=>Number(SKILL_SCORES[k]||0)).filter(v=>Number.isFinite(v)&&v>0);
+  if(assessed.length){
+    const avg=Math.round((assessed.reduce((a,b)=>a+b,0)/assessed.length)*10)/10;
+    doc.setFillColor(239,248,244); doc.setDrawColor(22,163,74); doc.roundedRect(12,y,186,16,3,3,"FD");
+    v5Font(doc,lang,"bold"); doc.setTextColor(22,68,120); doc.setFontSize(9);
+    doc.text(ar?"متوسط التقييم النهائي للمهارات":"Final Skills Evaluation Average",70,y+6,{align:"center"});
+    doc.setTextColor(22,163,74); doc.setFontSize(12); doc.text(`${avg} / 10 • ${Math.round(avg*10)}%`,158,y+10,{align:"center"});
+  }
+
+  addAllSkillChartsPage(doc,lang);
+  v5Footer(doc,lang);
+  const safe=String(STUDENT.name||"Student").replace(/[\\/:*?"<>|]/g,"-");
+  doc.save(`Prudle_Report_${ar?"AR":"EN"}_${safe}.pdf`);
+}
+async function exportPDFReport(){
+  if(REPORT_LANGUAGE==="ar"){
+    return exportPDFReportArabic();
+  }
+  return exportPDFReportEnglish();
+}
+
+async function exportPDFReportEnglish(){
+  return exportProfessionalPDF("en");
 }
 
 /* ================= MNAR ================= */
